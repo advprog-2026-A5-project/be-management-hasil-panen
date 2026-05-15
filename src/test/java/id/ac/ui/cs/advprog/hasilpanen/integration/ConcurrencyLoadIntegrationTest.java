@@ -219,8 +219,7 @@ class ConcurrencyLoadIntegrationTest {
 
         @Override
         public HarvestReport save(HarvestReport report) {
-            store.putIfAbsent(report.getHarvestId(), report);
-            store.put(report.getHarvestId(), report);
+            store.compute(report.getHarvestId(), (id, existing) -> report);
             return report;
         }
 
