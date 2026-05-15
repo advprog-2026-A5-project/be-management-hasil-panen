@@ -10,6 +10,7 @@ public class HarvestReport {
 
     private final UUID harvestId;
     private final UUID buruhId;
+    private String buruhNameSnapshot;
     private final LocalDate harvestDate;
     private final BigDecimal kilogram;
     private final String reportText;
@@ -54,6 +55,14 @@ public class HarvestReport {
 
     public UUID getBuruhId() {
         return buruhId;
+    }
+
+    public String getBuruhNameSnapshot() {
+        return buruhNameSnapshot == null ? "" : buruhNameSnapshot;
+    }
+
+    public void setBuruhNameSnapshot(String buruhNameSnapshot) {
+        this.buruhNameSnapshot = buruhNameSnapshot;
     }
 
     public LocalDate getHarvestDate() {
