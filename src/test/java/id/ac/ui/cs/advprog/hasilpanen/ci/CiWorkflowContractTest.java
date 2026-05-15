@@ -16,8 +16,8 @@ class CiWorkflowContractTest {
         assertThat(workflow).contains("pull_request:");
         assertThat(workflow).contains("buildAndTest:");
         assertThat(workflow).contains("backend-analysis:");
-        assertThat(workflow).contains("./gradlew test");
-        assertThat(workflow).contains("--tests \"id.ac.ui.cs.advprog.hasilpanen.integration.*\"");
+        assertThat(workflow).contains("test --tests \"id.ac.ui.cs.advprog.hasilpanen.integration.*\"");
+        assertThat(workflow).contains("test jacocoTestReport");
         assertThat(workflow).contains("jacocoTestReport");
         assertThat(workflow).contains("bootJar");
         assertThat(workflow).contains("min-coverage-overall: 80");
