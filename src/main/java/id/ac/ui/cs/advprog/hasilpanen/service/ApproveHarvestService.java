@@ -2,7 +2,6 @@ package id.ac.ui.cs.advprog.hasilpanen.service;
 
 import id.ac.ui.cs.advprog.hasilpanen.client.MandorBuruhClient;
 import id.ac.ui.cs.advprog.hasilpanen.domain.HarvestReport;
-import id.ac.ui.cs.advprog.hasilpanen.domain.HarvestStatus;
 import java.time.Instant;
 import java.util.Set;
 import java.util.UUID;
@@ -29,9 +28,7 @@ public class ApproveHarvestService {
         Set<UUID> assigned = mandorBuruhClient.getAssignedBuruhIds(command.mandorId());
         MandorAssignmentPolicy.ensureAssigned(report.getBuruhId(), assigned);
 
-        if (report.getStatus() != HarvestStatus.PENDING) {
-            throw new HarvestTerminalStatusException("harvest already in terminal status");
-        }
+        ApprovalPolicy.ensurePending(report);
 
         report.approve(command.mandorId());
         approvalRepository.save(report);
@@ -41,7 +38,7 @@ public class ApproveHarvestService {
                 report.getHarvestId(),
                 "HarvestReport",
                 "PAYROLL_TRIGGERED",
-                "{\"harvestId\":\"" + report.getHarvestId() + "\"}",
+                ApprovalPolicy.payrollPayload(report),
                 "PENDING",
                 Instant.now()));
     }
