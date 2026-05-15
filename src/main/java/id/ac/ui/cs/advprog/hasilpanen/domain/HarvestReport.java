@@ -48,6 +48,14 @@ public class HarvestReport {
         return status;
     }
 
+    public UUID getBuruhId() {
+        return buruhId;
+    }
+
+    public LocalDate getHarvestDate() {
+        return harvestDate;
+    }
+
     public void updateSubmissionByBuruh(BigDecimal newKilogram, String newReportText, List<String> newPhotos) {
         throw new IllegalStateException("submitted harvest cannot be modified by buruh");
     }

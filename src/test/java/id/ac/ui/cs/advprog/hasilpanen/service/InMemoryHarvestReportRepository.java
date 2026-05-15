@@ -2,7 +2,6 @@ package id.ac.ui.cs.advprog.hasilpanen.service;
 
 import id.ac.ui.cs.advprog.hasilpanen.domain.HarvestReport;
 import id.ac.ui.cs.advprog.hasilpanen.repository.HarvestReportRepository;
-import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.Optional;
@@ -20,7 +19,7 @@ class InMemoryHarvestReportRepository implements HarvestReportRepository {
 
     @Override
     public HarvestReport save(HarvestReport report) {
-        store.putIfAbsent(key(readBuruhId(report), readHarvestDate(report)), report);
+        store.putIfAbsent(key(report.getBuruhId(), report.getHarvestDate()), report);
         return report;
     }
 
@@ -28,21 +27,4 @@ class InMemoryHarvestReportRepository implements HarvestReportRepository {
         return buruhId + "|" + date;
     }
 
-    private UUID readBuruhId(HarvestReport report) {
-        return readField(report, "buruhId", UUID.class);
-    }
-
-    private LocalDate readHarvestDate(HarvestReport report) {
-        return readField(report, "harvestDate", LocalDate.class);
-    }
-
-    private <T> T readField(HarvestReport report, String fieldName, Class<T> type) {
-        try {
-            Field field = HarvestReport.class.getDeclaredField(fieldName);
-            field.setAccessible(true);
-            return type.cast(field.get(report));
-        } catch (Exception e) {
-            throw new IllegalStateException("cannot read field: " + fieldName, e);
-        }
-    }
 }
