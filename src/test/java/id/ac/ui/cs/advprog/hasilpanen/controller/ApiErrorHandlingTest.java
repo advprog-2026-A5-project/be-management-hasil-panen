@@ -5,25 +5,18 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import id.ac.ui.cs.advprog.hasilpanen.service.DuplicateHarvestSubmissionException;
-import id.ac.ui.cs.advprog.hasilpanen.service.HarvestNotFoundException;
-import id.ac.ui.cs.advprog.hasilpanen.service.HarvestTerminalStatusException;
-import id.ac.ui.cs.advprog.hasilpanen.service.MandorUnauthorizedAccessException;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
+import id.ac.ui.cs.advprog.hasilpanen.config.ApiExceptionHandler;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.context.annotation.Import;
 
-@WebMvcTest(controllers = ApiErrorHandlingTest.TestErrorController.class)
+@WebMvcTest(controllers = TestErrorController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@Import(ApiExceptionHandler.class)
 class ApiErrorHandlingTest {
 
     @Autowired
@@ -64,37 +57,5 @@ class ApiErrorHandlingTest {
         mockMvc.perform(get("/test/not-found"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("NOT_FOUND"));
-    }
-
-    @RestController
-    static class TestErrorController {
-
-        @PostMapping("/test/validation")
-        String validation(@Valid @RequestBody TestBody body) {
-            return "ok";
-        }
-
-        @GetMapping("/test/unauthorized-mandor")
-        String unauthorizedMandor() {
-            throw new MandorUnauthorizedAccessException("no access");
-        }
-
-        @GetMapping("/test/duplicate")
-        String duplicate() {
-            throw new DuplicateHarvestSubmissionException("duplicate");
-        }
-
-        @GetMapping("/test/terminal")
-        String terminal() {
-            throw new HarvestTerminalStatusException("terminal");
-        }
-
-        @GetMapping("/test/not-found")
-        String notFound() {
-            throw new HarvestNotFoundException("missing");
-        }
-    }
-
-    record TestBody(@NotBlank String name) {
     }
 }
