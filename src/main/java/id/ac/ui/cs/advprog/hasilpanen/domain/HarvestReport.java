@@ -76,6 +76,10 @@ public class HarvestReport {
         return rejectionReason;
     }
 
+    public BigDecimal getKilogram() {
+        return kilogram;
+    }
+
     public UUID getApprovedBy() {
         return approvedBy;
     }
