@@ -32,9 +32,7 @@ public class MandorHarvestHistoryService {
 
     public List<MandorHarvestView> getBuruhHarvests(UUID mandorId, UUID buruhId) {
         Set<UUID> assigned = mandorBuruhClient.getAssignedBuruhIds(mandorId);
-        if (!assigned.contains(buruhId)) {
-            throw new MandorUnauthorizedAccessException("mandor unauthorized for this buruh");
-        }
+        MandorAssignmentPolicy.ensureAssigned(buruhId, assigned);
 
         return repository.findByBuruhId(buruhId).stream()
                 .sorted(Comparator.comparing(HarvestReport::getHarvestDate).reversed())
