@@ -12,6 +12,7 @@ provider "aws" {
   region = var.aws_region
 }
 
+# Networking
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_support   = true
@@ -41,6 +42,7 @@ resource "aws_subnet" "public_b" {
   }
 }
 
+# Security groups
 resource "aws_security_group" "ecs_sg" {
   name        = "${var.project_name}-ecs-sg"
   description = "Security group for ECS service"
@@ -81,6 +83,7 @@ resource "aws_security_group" "rds_sg" {
   }
 }
 
+# Database
 resource "aws_db_subnet_group" "rds_subnet_group" {
   name       = "${var.project_name}-rds-subnet-group"
   subnet_ids = [aws_subnet.public_a.id, aws_subnet.public_b.id]
@@ -101,6 +104,7 @@ resource "aws_db_instance" "postgres" {
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
 }
 
+# Container registry and compute cluster
 resource "aws_ecr_repository" "app_repo" {
   name = "${var.project_name}-repo"
 }
