@@ -2,8 +2,6 @@ package id.ac.ui.cs.advprog.hasilpanen.service;
 
 import id.ac.ui.cs.advprog.hasilpanen.client.MandorBuruhClient;
 import id.ac.ui.cs.advprog.hasilpanen.domain.HarvestReport;
-import java.util.Set;
-import java.util.UUID;
 
 public class RejectHarvestService {
 
@@ -16,13 +14,8 @@ public class RejectHarvestService {
     }
 
     public synchronized void reject(RejectHarvestCommand command) {
-        HarvestReport report = repository.findById(command.harvestId())
-                .orElseThrow(() -> new HarvestNotFoundException("harvest not found"));
-
-        Set<UUID> assigned = mandorBuruhClient.getAssignedBuruhIds(command.mandorId());
-        MandorAssignmentPolicy.ensureAssigned(report.getBuruhId(), assigned);
-
-        ApprovalPolicy.ensurePending(report);
+        HarvestReport report = HarvestTransitionGuard.loadPendingAuthorizedHarvest(
+                repository, mandorBuruhClient, command.harvestId(), command.mandorId());
         report.reject(command.mandorId(), command.reason());
         repository.save(report);
     }

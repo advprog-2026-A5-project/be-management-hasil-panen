@@ -3,7 +3,6 @@ package id.ac.ui.cs.advprog.hasilpanen.service;
 import id.ac.ui.cs.advprog.hasilpanen.client.MandorBuruhClient;
 import id.ac.ui.cs.advprog.hasilpanen.domain.HarvestReport;
 import java.time.Instant;
-import java.util.Set;
 import java.util.UUID;
 
 public class ApproveHarvestService {
@@ -22,13 +21,8 @@ public class ApproveHarvestService {
     }
 
     public synchronized void approve(ApproveHarvestCommand command) {
-        HarvestReport report = approvalRepository.findById(command.harvestId())
-                .orElseThrow(() -> new HarvestNotFoundException("harvest not found"));
-
-        Set<UUID> assigned = mandorBuruhClient.getAssignedBuruhIds(command.mandorId());
-        MandorAssignmentPolicy.ensureAssigned(report.getBuruhId(), assigned);
-
-        ApprovalPolicy.ensurePending(report);
+        HarvestReport report = HarvestTransitionGuard.loadPendingAuthorizedHarvest(
+                approvalRepository, mandorBuruhClient, command.harvestId(), command.mandorId());
 
         report.approve(command.mandorId());
         approvalRepository.save(report);
