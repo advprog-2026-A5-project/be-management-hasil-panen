@@ -85,7 +85,7 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Analyze backend
-        run: ./gradlew --no-daemon test --tests "id.ac.ui.cs.advprog.hasilpanen.integration.*" jacocoTestReport bootJar
+        run: ./gradlew --no-daemon test jacocoTestReport bootJar
 
       - name: Upload SpotBugs SARIF
         if: ${{ always() && hashFiles('build/reports/spotbugs/main.sarif') != '' }}
