@@ -1,6 +1,7 @@
 package id.ac.ui.cs.advprog.hasilpanen.config;
 
 import id.ac.ui.cs.advprog.hasilpanen.dto.ApiErrorResponse;
+import id.ac.ui.cs.advprog.hasilpanen.dto.ApiErrorCode;
 import id.ac.ui.cs.advprog.hasilpanen.service.DuplicateHarvestSubmissionException;
 import id.ac.ui.cs.advprog.hasilpanen.service.HarvestNotFoundException;
 import id.ac.ui.cs.advprog.hasilpanen.service.HarvestTerminalStatusException;
@@ -21,45 +22,45 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleValidation(
             MethodArgumentNotValidException ex,
             HttpServletRequest request) {
-        return build(HttpStatus.BAD_REQUEST, "BAD_REQUEST", "Request body is invalid", request.getRequestURI());
+        return build(HttpStatus.BAD_REQUEST, ApiErrorCode.BAD_REQUEST, "Request body is invalid", request.getRequestURI());
     }
 
     @ExceptionHandler(MandorUnauthorizedAccessException.class)
     public ResponseEntity<ApiErrorResponse> handleUnauthorized(
             MandorUnauthorizedAccessException ex,
             HttpServletRequest request) {
-        return build(HttpStatus.FORBIDDEN, "FORBIDDEN", ex.getMessage(), request.getRequestURI());
+        return build(HttpStatus.FORBIDDEN, ApiErrorCode.FORBIDDEN, ex.getMessage(), request.getRequestURI());
     }
 
     @ExceptionHandler(HarvestNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleNotFound(
             HarvestNotFoundException ex,
             HttpServletRequest request) {
-        return build(HttpStatus.NOT_FOUND, "NOT_FOUND", ex.getMessage(), request.getRequestURI());
+        return build(HttpStatus.NOT_FOUND, ApiErrorCode.NOT_FOUND, ex.getMessage(), request.getRequestURI());
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleNoResource(
             NoResourceFoundException ex,
             HttpServletRequest request) {
-        return build(HttpStatus.NOT_FOUND, "NOT_FOUND", "Resource not found", request.getRequestURI());
+        return build(HttpStatus.NOT_FOUND, ApiErrorCode.NOT_FOUND, "Resource not found", request.getRequestURI());
     }
 
     @ExceptionHandler({DuplicateHarvestSubmissionException.class, HarvestTerminalStatusException.class})
     public ResponseEntity<ApiErrorResponse> handleConflict(
             RuntimeException ex,
             HttpServletRequest request) {
-        return build(HttpStatus.CONFLICT, "CONFLICT", ex.getMessage(), request.getRequestURI());
+        return build(HttpStatus.CONFLICT, ApiErrorCode.CONFLICT, ex.getMessage(), request.getRequestURI());
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleInternal(
             Exception ex,
             HttpServletRequest request) {
-        return build(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", "Unexpected error", request.getRequestURI());
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, ApiErrorCode.INTERNAL_SERVER_ERROR, "Unexpected error", request.getRequestURI());
     }
 
-    private ResponseEntity<ApiErrorResponse> build(HttpStatus status, String error, String message, String path) {
+    private ResponseEntity<ApiErrorResponse> build(HttpStatus status, ApiErrorCode error, String message, String path) {
         return ResponseEntity.status(status)
                 .body(new ApiErrorResponse(Instant.now(), status.value(), error, message, path));
     }
