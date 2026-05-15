@@ -22,8 +22,14 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Run build and tests
-        run: ./gradlew clean test jacocoTestReport bootJar --no-daemon
+      - name: Run integration tests
+        run: ./gradlew test --tests "id.ac.ui.cs.advprog.hasilpanen.integration.*" --no-daemon
+
+      - name: Run unit tests and coverage
+        run: ./gradlew test jacocoTestReport --no-daemon
+
+      - name: Build artifact
+        run: ./gradlew bootJar --no-daemon
 
   security-analysis:
     name: Scorecard analysis
@@ -79,7 +85,7 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Analyze backend
-        run: ./gradlew test jacocoTestReport bootJar --no-daemon
+        run: ./gradlew test --tests "id.ac.ui.cs.advprog.hasilpanen.integration.*" jacocoTestReport bootJar --no-daemon
 
       - name: Upload SpotBugs SARIF
         if: ${{ always() && hashFiles('build/reports/spotbugs/main.sarif') != '' }}
