@@ -1,7 +1,5 @@
 package id.ac.ui.cs.advprog.hasilpanen.service;
 
-import java.time.Instant;
-
 public class OutboxPublisher {
 
     private final PublishableOutboxRepository repository;
@@ -16,27 +14,9 @@ public class OutboxPublisher {
         for (OutboxEvent event : repository.findPending()) {
             try {
                 transport.publish(event);
-                repository.save(new OutboxEvent(
-                        event.eventId(),
-                        event.aggregateId(),
-                        event.aggregateType(),
-                        event.eventType(),
-                        event.payload(),
-                        "SENT",
-                        event.createdAt(),
-                        Instant.now(),
-                        event.retryCount()));
+                repository.save(OutboxStateTransition.markSent(event));
             } catch (Exception ex) {
-                repository.save(new OutboxEvent(
-                        event.eventId(),
-                        event.aggregateId(),
-                        event.aggregateType(),
-                        event.eventType(),
-                        event.payload(),
-                        "FAILED",
-                        event.createdAt(),
-                        event.publishedAt(),
-                        event.retryCount() + 1));
+                repository.save(OutboxStateTransition.markFailed(event));
             }
         }
     }
