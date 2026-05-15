@@ -53,6 +53,10 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
+tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
+    mainClass.set("id.ac.ui.cs.advprog.hasilpanen.HasilPanenApplication")
+}
+
 tasks.withType<SpotBugsTask> {
     reports {
         create("sarif") {

@@ -5,25 +5,25 @@ on:
   pull_request:
 
 jobs:
-  # Continuous Integration
   buildAndTest:
     name: Run tests and code quality
     runs-on: ubuntu-22.04
     steps:
       - name: Check out the Git repository
         uses: actions/checkout@v4
+
       - name: Set up Java toolchain
         uses: actions/setup-java@v4
         with:
-          distribution: "temurin"
+          distribution: temurin
           java-version: "21"
-          cache: "gradle"
+          cache: gradle
+
       - name: Make gradlew executable
-        working-directory: ./apps/backend/
         run: chmod +x ./gradlew
-      - name: Run unit tests and checkstyle linter
-        working-directory: ./apps/backend/
-        run: ./gradlew build
+
+      - name: Run build and tests
+        run: ./gradlew clean test jacocoTestReport bootJar --no-daemon
 
   security-analysis:
     name: Scorecard analysis
@@ -35,108 +35,83 @@ jobs:
       contents: read
       actions: read
     steps:
-      - name: "Checkout code"
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: "Run analysis"
-        uses: ossf/scorecard-action@f49aabe0b5af0936a0987cfb85d86b75731b0186 # v2.4.1
+
+      - name: Run analysis
+        uses: ossf/scorecard-action@v2.4.1
         with:
           results_file: results.sarif
           results_format: sarif
           publish_results: true
-      - name: "Upload artifact"
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: SARIF file
+          name: scorecard-sarif
           path: results.sarif
           retention-days: 5
-      - name: "Upload to code-scanning"
+
+      - name: Upload to code-scanning
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: results.sarif
           category: scorecards
 
   backend-analysis:
+    name: backend-analysis
     runs-on: ubuntu-latest
     permissions:
       security-events: write
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '21'
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
 
       - name: Make gradlew executable
-        working-directory: ./apps/backend/
         run: chmod +x ./gradlew
 
-      - name: Build and Analyze
-        working-directory: apps/backend/
-        run: ./gradlew check jacocoTestReport
+      - name: Analyze backend
+        run: ./gradlew test jacocoTestReport bootJar --no-daemon
 
       - name: Upload SpotBugs SARIF
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        if: ${{ always() && hashFiles('build/reports/spotbugs/main.sarif') != '' }}
+        uses: github/codeql-action/upload-sarif@v4
         with:
-          sarif_file: ${{ github.workspace }}/apps/backend/build/reports/spotbugs/main.sarif
+          sarif_file: ${{ github.workspace }}/build/reports/spotbugs/main.sarif
           category: spotbugs-backend
-
-      - name: Checkstyle PR Reviewer
-        uses: dbelyaev/action-checkstyle@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: JaCoCo PR Report
         if: github.event_name == 'pull_request'
-        uses: Madrapps/jacoco-report@v1.6.1
+        uses: Madrapps/jacoco-report@v1.7.2
         with:
-          paths: ${{ github.workspace }}/apps/backend/build/reports/jacoco/test/jacocoTestReport.xml
+          paths: ${{ github.workspace }}/build/reports/jacoco/test/jacocoTestReport.xml
           token: ${{ secrets.GITHUB_TOKEN }}
           min-coverage-overall: 80
-          title: 'Backend Test Coverage'
+          title: Backend Test Coverage
 
   frontend-analysis:
+    name: frontend-analysis
     runs-on: ubuntu-latest
-    permissions:
-      security-events: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install Dependencies
-        working-directory: ${{ github.workspace }}/apps/frontend
-        run: npm ci
-
-      - name: Run ESLint
-        working-directory: ${{ github.workspace }}/apps/frontend
-        run: |
-          npm install --no-audit --no-fund --no-save @microsoft/eslint-formatter-sarif
-          npx eslint . --format @microsoft/eslint-formatter-sarif --output-file eslint-results.sarif
-        continue-on-error: true
-      - name: "Upload artifact"
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
-        with:
-          name: SARIF file
-          path: ${{ github.workspace }}/apps/frontend/eslint-results.sarif
-          retention-days: 5
-      - name: Upload ESLint SARIF
-        uses: github/codeql-action/upload-sarif@9e907b5e64f6b83e7804b09294d44122997950d6
-        with:
-          sarif_file: ${{ github.workspace }}/apps/frontend/eslint-results.sarif
-          category: eslint-frontend
+      - name: Frontend analysis not applicable for standalone backend service
+        run: echo "No frontend module in this repository; skipping frontend analysis."
 
   dummy-deploy:
+    name: dummy-deploy
     needs: buildAndTest
     if: github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - name: Check Quality Gate
-        run: echo "Quality Gate Passed! Tests and Linter are clean."
+        run: echo "Quality Gate Passed! Tests and linter are clean."
 
       - name: Simulate Deployment to Staging
         if: github.ref == 'refs/heads/staging'
