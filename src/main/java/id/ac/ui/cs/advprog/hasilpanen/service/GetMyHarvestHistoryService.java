@@ -14,9 +14,7 @@ public class GetMyHarvestHistoryService {
 
     public MyHarvestHistoryResult getMyHistory(MyHarvestHistoryQuery query) {
         List<HarvestReport> filtered = repository.findByBuruhId(query.buruhId()).stream()
-                .filter(report -> query.startDate() == null || !report.getHarvestDate().isBefore(query.startDate()))
-                .filter(report -> query.endDate() == null || !report.getHarvestDate().isAfter(query.endDate()))
-                .filter(report -> query.status() == null || report.getStatus() == query.status())
+                .filter(report -> HarvestHistoryFilter.matches(report, query))
                 .sorted(Comparator.comparing(HarvestReport::getHarvestDate).reversed())
                 .toList();
 
