@@ -29,7 +29,7 @@ class HarvestMigrationTest {
         String sql = "SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS "
                 + "WHERE TABLE_NAME = 'HARVEST_REPORTS' AND CONSTRAINT_TYPE = 'UNIQUE'";
         List<String> constraints = jdbcTemplate.queryForList(sql, String.class);
-        assertThat(constraints).isNotEmpty();
+        assertThat(constraints).contains("UK_HARVEST_REPORTS_BURUH_DATE");
     }
 
     @Test
