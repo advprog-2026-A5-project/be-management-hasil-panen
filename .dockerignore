@@ -1,0 +1,15 @@
+.git
+.gradle
+build
+out
+.vscode
+.idea
+*.iml
+*.ipr
+*.iws
+
+reference
+
+.env
+
+**/node_modules
