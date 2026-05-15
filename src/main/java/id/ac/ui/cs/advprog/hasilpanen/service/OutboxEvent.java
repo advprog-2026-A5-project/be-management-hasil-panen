@@ -10,5 +10,7 @@ public record OutboxEvent(
         String eventType,
         String payload,
         String status,
-        Instant createdAt) {
+        Instant createdAt,
+        Instant publishedAt,
+        int retryCount) {
 }
