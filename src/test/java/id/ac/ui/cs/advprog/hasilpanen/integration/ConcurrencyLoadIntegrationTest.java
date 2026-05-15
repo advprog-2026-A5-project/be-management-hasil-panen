@@ -2,6 +2,7 @@ package id.ac.ui.cs.advprog.hasilpanen.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import id.ac.ui.cs.advprog.hasilpanen.client.MandorBuruhClient;
 import id.ac.ui.cs.advprog.hasilpanen.domain.HarvestReport;
 import id.ac.ui.cs.advprog.hasilpanen.domain.HarvestStatus;
 import id.ac.ui.cs.advprog.hasilpanen.repository.HarvestReportRepository;
@@ -18,7 +19,6 @@ import id.ac.ui.cs.advprog.hasilpanen.service.OutboxEvent;
 import id.ac.ui.cs.advprog.hasilpanen.service.OutboxEventRepository;
 import id.ac.ui.cs.advprog.hasilpanen.service.RejectHarvestCommand;
 import id.ac.ui.cs.advprog.hasilpanen.service.RejectHarvestService;
-import id.ac.ui.cs.advprog.hasilpanen.service.StubMandorBuruhClient;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -90,7 +90,7 @@ class ConcurrencyLoadIntegrationTest {
         ApproveHarvestService service = new ApproveHarvestService(
                 repository,
                 outbox,
-                new StubMandorBuruhClient(mandorId, List.of(buruhId)));
+                new LocalMandorBuruhClient(mandorId, List.of(buruhId)));
 
         int threads = 20;
         var pool = Executors.newFixedThreadPool(threads);
@@ -136,10 +136,10 @@ class ConcurrencyLoadIntegrationTest {
         ApproveHarvestService approveService = new ApproveHarvestService(
                 repository,
                 new InMemoryOutbox(),
-                new StubMandorBuruhClient(mandorId, List.of(buruhId)));
+                new LocalMandorBuruhClient(mandorId, List.of(buruhId)));
         RejectHarvestService rejectService = new RejectHarvestService(
                 repository,
-                new StubMandorBuruhClient(mandorId, List.of(buruhId)));
+                new LocalMandorBuruhClient(mandorId, List.of(buruhId)));
 
         var pool = Executors.newFixedThreadPool(2);
         CountDownLatch ready = new CountDownLatch(2);
@@ -250,6 +250,24 @@ class ConcurrencyLoadIntegrationTest {
         @Override
         public synchronized List<OutboxEvent> findAll() {
             return List.copyOf(events);
+        }
+    }
+
+    static class LocalMandorBuruhClient implements MandorBuruhClient {
+        private final UUID mandorId;
+        private final List<UUID> assigned;
+
+        LocalMandorBuruhClient(UUID mandorId, List<UUID> assigned) {
+            this.mandorId = mandorId;
+            this.assigned = List.copyOf(assigned);
+        }
+
+        @Override
+        public java.util.Set<UUID> getAssignedBuruhIds(UUID mandorId) {
+            if (!this.mandorId.equals(mandorId)) {
+                return java.util.Set.of();
+            }
+            return java.util.Set.copyOf(assigned);
         }
     }
 }
