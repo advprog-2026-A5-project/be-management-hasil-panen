@@ -20,6 +20,8 @@ public class HarvestReport {
     private String rejectionReason;
     private UUID approvedBy;
     private OffsetDateTime approvedAt;
+    private UUID rejectedBy;
+    private OffsetDateTime rejectedAt;
 
     private HarvestReport(
             UUID harvestId,
@@ -84,6 +86,14 @@ public class HarvestReport {
         return approvedAt;
     }
 
+    public UUID getRejectedBy() {
+        return rejectedBy;
+    }
+
+    public OffsetDateTime getRejectedAt() {
+        return rejectedAt;
+    }
+
     public void approve(UUID approvedBy) {
         if (status != HarvestStatus.PENDING) {
             throw new IllegalStateException("only pending harvest can be approved");
@@ -101,8 +111,13 @@ public class HarvestReport {
         if (reason == null || reason.isBlank()) {
             throw new IllegalArgumentException("rejection reason is required");
         }
+        if (status != HarvestStatus.PENDING) {
+            throw new IllegalStateException("only pending harvest can be rejected");
+        }
 
         this.status = HarvestStatus.REJECTED;
         this.rejectionReason = reason;
+        this.rejectedBy = rejectedBy;
+        this.rejectedAt = OffsetDateTime.now();
     }
 }
