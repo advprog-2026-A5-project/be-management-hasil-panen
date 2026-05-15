@@ -48,12 +48,20 @@ public class HarvestReport {
         return status;
     }
 
+    public UUID getHarvestId() {
+        return harvestId;
+    }
+
     public UUID getBuruhId() {
         return buruhId;
     }
 
     public LocalDate getHarvestDate() {
         return harvestDate;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
     }
 
     public void updateSubmissionByBuruh(BigDecimal newKilogram, String newReportText, List<String> newPhotos) {
