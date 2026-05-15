@@ -34,6 +34,8 @@ public class ApproveHarvestService {
                 "PAYROLL_TRIGGERED",
                 ApprovalPolicy.payrollPayload(report),
                 "PENDING",
-                Instant.now()));
+                Instant.now(),
+                null,
+                0));
     }
 }
