@@ -2,6 +2,7 @@ package id.ac.ui.cs.advprog.hasilpanen.domain;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -17,6 +18,8 @@ public class HarvestReport {
     private final List<String> photos;
     private HarvestStatus status;
     private String rejectionReason;
+    private UUID approvedBy;
+    private OffsetDateTime approvedAt;
 
     private HarvestReport(
             UUID harvestId,
@@ -71,6 +74,23 @@ public class HarvestReport {
 
     public String getRejectionReason() {
         return rejectionReason;
+    }
+
+    public UUID getApprovedBy() {
+        return approvedBy;
+    }
+
+    public OffsetDateTime getApprovedAt() {
+        return approvedAt;
+    }
+
+    public void approve(UUID approvedBy) {
+        if (status != HarvestStatus.PENDING) {
+            throw new IllegalStateException("only pending harvest can be approved");
+        }
+        this.status = HarvestStatus.APPROVED;
+        this.approvedBy = approvedBy;
+        this.approvedAt = OffsetDateTime.now();
     }
 
     public void updateSubmissionByBuruh(BigDecimal newKilogram, String newReportText, List<String> newPhotos) {
