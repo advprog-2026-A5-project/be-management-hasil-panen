@@ -1,5 +1,6 @@
 package id.ac.ui.cs.advprog.hasilpanen.client;
 
+import id.ac.ui.cs.advprog.hasilpanen.service.HarvestPublicApiService;
 import id.ac.ui.cs.advprog.hasilpanen.service.LegacyIdBridge;
 import java.util.Map;
 import java.util.UUID;
@@ -19,22 +20,37 @@ public class KebunServiceRestClient {
         this.restTemplate = restTemplate;
     }
 
-    public boolean hasFarmAccess(Long mandorId, String kebunCode, String bearerToken) {
+    public HarvestPublicApiService.MandorKebunAssignment getKebunByMandor(Long mandorId, String bearerToken) {
         UUID mandorUuid = LegacyIdBridge.longToUuid(mandorId);
         String url = baseUrl + "/internal/mandors/" + mandorUuid + "/kebun";
         ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, withBearer(bearerToken), Map.class);
         Map body = response.getBody();
         if (body == null) {
-            return false;
+            return new HarvestPublicApiService.MandorKebunAssignment(mandorId, null, null, null, false);
         }
-        boolean active = Boolean.TRUE.equals(body.get("active"));
-        Object code = body.get("kebunCode");
-        return active && kebunCode != null && kebunCode.equals(code);
+        return new HarvestPublicApiService.MandorKebunAssignment(
+                toLong(body.get("mandorId")),
+                (String) body.get("kebunId"),
+                (String) body.get("kebunCode"),
+                (String) body.get("kebunName"),
+                Boolean.TRUE.equals(body.get("active")));
+    }
+
+    public boolean hasFarmAccess(Long mandorId, String kebunCode, String bearerToken) {
+        HarvestPublicApiService.MandorKebunAssignment assignment = getKebunByMandor(mandorId, bearerToken);
+        return assignment.active() && kebunCode != null && kebunCode.equals(assignment.kebunCode());
     }
 
     private HttpEntity<Void> withBearer(String bearerToken) {
         HttpHeaders headers = new HttpHeaders();
         headers.set(HttpHeaders.AUTHORIZATION, bearerToken);
         return new HttpEntity<>(headers);
+    }
+
+    private Long toLong(Object value) {
+        if (value == null) {
+            return null;
+        }
+        return ((Number) value).longValue();
     }
 }

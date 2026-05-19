@@ -3,9 +3,11 @@ package id.ac.ui.cs.advprog.hasilpanen.config;
 import id.ac.ui.cs.advprog.hasilpanen.dto.ApiErrorResponse;
 import id.ac.ui.cs.advprog.hasilpanen.dto.ApiErrorCode;
 import id.ac.ui.cs.advprog.hasilpanen.service.DuplicateHarvestSubmissionException;
+import id.ac.ui.cs.advprog.hasilpanen.service.AuthenticationRequiredException;
 import id.ac.ui.cs.advprog.hasilpanen.service.HarvestNotFoundException;
 import id.ac.ui.cs.advprog.hasilpanen.service.HarvestTerminalStatusException;
 import id.ac.ui.cs.advprog.hasilpanen.service.MandorUnauthorizedAccessException;
+import id.ac.ui.cs.advprog.hasilpanen.service.RoleForbiddenException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import org.springframework.http.HttpStatus;
@@ -32,6 +34,20 @@ public class ApiExceptionHandler {
         return build(HttpStatus.FORBIDDEN, ApiErrorCode.FORBIDDEN, ex.getMessage(), request.getRequestURI());
     }
 
+    @ExceptionHandler(RoleForbiddenException.class)
+    public ResponseEntity<ApiErrorResponse> handleRoleForbidden(
+            RoleForbiddenException ex,
+            HttpServletRequest request) {
+        return build(HttpStatus.FORBIDDEN, ApiErrorCode.FORBIDDEN, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(AuthenticationRequiredException.class)
+    public ResponseEntity<ApiErrorResponse> handleAuthRequired(
+            AuthenticationRequiredException ex,
+            HttpServletRequest request) {
+        return build(HttpStatus.UNAUTHORIZED, ApiErrorCode.UNAUTHORIZED, ex.getMessage(), request.getRequestURI());
+    }
+
     @ExceptionHandler(HarvestNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleNotFound(
             HarvestNotFoundException ex,
@@ -51,6 +67,13 @@ public class ApiExceptionHandler {
             RuntimeException ex,
             HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ApiErrorCode.CONFLICT, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiErrorResponse> handleBadRequest(
+            IllegalArgumentException ex,
+            HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ApiErrorCode.BAD_REQUEST, ex.getMessage(), request.getRequestURI());
     }
 
     @ExceptionHandler(Exception.class)
