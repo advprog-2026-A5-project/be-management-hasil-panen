@@ -19,8 +19,8 @@ public class MandorHarvestHistoryService {
     }
 
     public List<MandorHarvestView> listAssignedHarvests(MandorHarvestListQuery query) {
-        Set<UUID> assigned = mandorBuruhClient.getAssignedBuruhIds(query.mandorId());
-        return repository.findAllByBuruhIds(assigned).stream()
+        Set<Long> assigned = mandorBuruhClient.getAssignedBuruhIds(query.mandorId());
+        return repository.findAllByBuruhIdsLong(assigned).stream()
                 .filter(report -> query.harvestDate() == null || report.getHarvestDate().equals(query.harvestDate()))
                 .filter(report -> query.buruhName() == null
                         || report.getBuruhNameSnapshot().toLowerCase(Locale.ROOT)
@@ -30,14 +30,18 @@ public class MandorHarvestHistoryService {
                 .toList();
     }
 
-    public List<MandorHarvestView> getBuruhHarvests(UUID mandorId, UUID buruhId) {
-        Set<UUID> assigned = mandorBuruhClient.getAssignedBuruhIds(mandorId);
+    public List<MandorHarvestView> getBuruhHarvests(Long mandorId, Long buruhId) {
+        Set<Long> assigned = mandorBuruhClient.getAssignedBuruhIds(mandorId);
         MandorAssignmentPolicy.ensureAssigned(buruhId, assigned);
 
         return repository.findByBuruhId(buruhId).stream()
                 .sorted(Comparator.comparing(HarvestReport::getHarvestDate).reversed())
                 .map(this::toView)
                 .toList();
+    }
+
+    public List<MandorHarvestView> getBuruhHarvests(UUID mandorId, UUID buruhId) {
+        return getBuruhHarvests(LegacyIdBridge.uuidToLong(mandorId), LegacyIdBridge.uuidToLong(buruhId));
     }
 
     private MandorHarvestView toView(HarvestReport report) {

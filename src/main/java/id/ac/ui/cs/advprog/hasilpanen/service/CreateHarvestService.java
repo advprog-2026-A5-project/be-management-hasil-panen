@@ -3,7 +3,6 @@ package id.ac.ui.cs.advprog.hasilpanen.service;
 import id.ac.ui.cs.advprog.hasilpanen.domain.HarvestReport;
 import id.ac.ui.cs.advprog.hasilpanen.repository.HarvestReportRepository;
 import java.time.LocalDate;
-import java.util.UUID;
 import java.util.function.Supplier;
 
 public class CreateHarvestService {
@@ -24,8 +23,11 @@ public class CreateHarvestService {
             }
 
             HarvestReport report = HarvestReport.submit(
-                    UUID.randomUUID(),
+                    java.util.UUID.randomUUID(),
                     command.buruhId(),
+                    command.mandorId(),
+                    command.kebunCode(),
+                    command.kebunId(),
                     today,
                     command.kilogram(),
                     command.reportText(),

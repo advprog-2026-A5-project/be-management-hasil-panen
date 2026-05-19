@@ -21,11 +21,15 @@ class InMemoryMandorHarvestRepository implements MandorHarvestRepository {
 
     @Override
     public List<HarvestReport> findByBuruhId(UUID buruhId) {
-        return store.stream().filter(report -> report.getBuruhId().equals(buruhId)).toList();
+        return store.stream()
+                .filter(report -> report.getBuruhId().equals(buruhId))
+                .toList();
     }
 
     @Override
     public List<HarvestReport> findAllByBuruhIds(Set<UUID> buruhIds) {
-        return store.stream().filter(report -> buruhIds.contains(report.getBuruhId())).toList();
+        return store.stream()
+                .filter(report -> buruhIds.contains(report.getBuruhId()))
+                .toList();
     }
 }

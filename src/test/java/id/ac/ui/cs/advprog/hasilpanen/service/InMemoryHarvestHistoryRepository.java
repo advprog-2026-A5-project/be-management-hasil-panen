@@ -15,6 +15,8 @@ class InMemoryHarvestHistoryRepository implements HarvestHistoryRepository {
 
     @Override
     public List<HarvestReport> findByBuruhId(UUID buruhId) {
-        return store.stream().filter(report -> report.getBuruhId().equals(buruhId)).toList();
+        return store.stream()
+                .filter(report -> report.getBuruhId().equals(buruhId))
+                .toList();
     }
 }

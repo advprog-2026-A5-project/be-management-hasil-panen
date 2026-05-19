@@ -11,7 +11,18 @@ public interface MandorHarvestRepository {
 
     List<HarvestReport> findByBuruhId(UUID buruhId);
 
+    default List<HarvestReport> findByBuruhId(Long buruhId) {
+        return findByBuruhId(LegacyIdBridge.longToUuid(buruhId));
+    }
+
     default List<HarvestReport> findAllByBuruhIds(Set<UUID> buruhIds) {
-        return findAll().stream().filter(report -> buruhIds.contains(report.getBuruhId())).toList();
+        return findAll().stream()
+                .filter(report -> buruhIds.contains(report.getBuruhId()))
+                .toList();
+    }
+
+    default List<HarvestReport> findAllByBuruhIdsLong(Set<Long> buruhIds) {
+        Set<UUID> normalized = buruhIds.stream().map(LegacyIdBridge::longToUuid).collect(java.util.stream.Collectors.toSet());
+        return findAllByBuruhIds(normalized);
     }
 }

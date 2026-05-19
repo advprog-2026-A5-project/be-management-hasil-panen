@@ -7,4 +7,8 @@ import java.util.UUID;
 public interface HarvestHistoryRepository {
 
     List<HarvestReport> findByBuruhId(UUID buruhId);
+
+    default List<HarvestReport> findByBuruhId(Long buruhId) {
+        return findByBuruhId(LegacyIdBridge.longToUuid(buruhId));
+    }
 }

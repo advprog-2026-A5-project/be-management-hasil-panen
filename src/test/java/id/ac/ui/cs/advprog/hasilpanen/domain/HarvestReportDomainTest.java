@@ -109,7 +109,7 @@ class HarvestReportDomainTest {
                 "valid",
                 List.of("https://a"));
 
-        assertThat(report.getBuruhId()).isEqualTo(10L);
+        assertThat(report.getBuruhAuthId()).isEqualTo(10L);
         assertThat(report.getMandorIdSnapshot()).isEqualTo(20L);
         assertThat(report.getKebunCodeSnapshot()).isEqualTo("KB-ALPHA");
     }
