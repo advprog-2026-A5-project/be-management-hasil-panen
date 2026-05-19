@@ -126,7 +126,15 @@ class ApproveHarvestServiceTest {
         service.approve(new ApproveHarvestCommand(report.getHarvestId(), mandorId));
 
         assertThat(outboxRepository.findAll()).hasSize(1);
-        assertThat(outboxRepository.findAll().getFirst().eventType()).isEqualTo("PAYROLL_TRIGGERED");
+        OutboxEvent event = outboxRepository.findAll().getFirst();
+        assertThat(event.eventType()).isEqualTo("harvest.approved.v1");
+        assertThat(event.payload()).contains("\"eventType\":\"harvest.approved.v1\"");
+        assertThat(event.payload()).contains("\"harvestId\":\"" + report.getHarvestId() + "\"");
+        assertThat(event.payload()).contains("\"buruhId\":" + report.getBuruhAuthId());
+        assertThat(event.payload()).contains("\"mandorId\":" + mandorId);
+        assertThat(event.payload()).contains("\"kebunCode\":\"KB001\"");
+        assertThat(event.payload()).contains("\"kilogram\":120");
+        assertThat(event.payload()).contains("\"idempotencyKey\":\"");
     }
 
     @Test
