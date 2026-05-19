@@ -41,12 +41,13 @@ public class ApproveHarvestService {
         report.approve(command.mandorId());
         approvalRepository.save(report);
 
+        UUID eventId = UUID.randomUUID();
         outboxEventRepository.save(new OutboxEvent(
-                UUID.randomUUID(),
+                eventId,
                 report.getHarvestId(),
                 "HarvestReport",
-                "PAYROLL_TRIGGERED",
-                ApprovalPolicy.payrollPayload(report),
+                "harvest.approved.v1",
+                ApprovalPolicy.payrollPayload(report, eventId),
                 "PENDING",
                 Instant.now(),
                 null,
