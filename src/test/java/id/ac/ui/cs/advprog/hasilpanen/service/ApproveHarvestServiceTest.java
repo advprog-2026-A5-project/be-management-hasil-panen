@@ -179,7 +179,7 @@ class ApproveHarvestServiceTest {
     private HarvestReport report(UUID buruhId) {
         return HarvestReport.submit(
                 UUID.randomUUID(),
-                buruhId,
+                LegacyIdBridge.uuidToLong(buruhId),
                 LegacyIdBridge.uuidToLong(UUID.randomUUID()),
                 "KB001",
                 null,

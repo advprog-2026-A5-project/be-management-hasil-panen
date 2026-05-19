@@ -142,7 +142,8 @@ class RejectHarvestServiceTest {
         ApproveHarvestService approveService = new ApproveHarvestService(
                 repository,
                 new InMemoryOutboxEventRepository(),
-                new StubMandorBuruhClient(mandorId, List.of(buruhId)));
+                new StubMandorBuruhClient(mandorId, List.of(buruhId)),
+                new StubKebunClient(true));
         RejectHarvestService rejectService = new RejectHarvestService(
                 repository,
                 new StubMandorBuruhClient(mandorId, List.of(buruhId)),
@@ -187,7 +188,7 @@ class RejectHarvestServiceTest {
     private HarvestReport report(UUID buruhId) {
         return HarvestReport.submit(
                 UUID.randomUUID(),
-                buruhId,
+                LegacyIdBridge.uuidToLong(buruhId),
                 LegacyIdBridge.uuidToLong(UUID.randomUUID()),
                 "KB001",
                 null,
