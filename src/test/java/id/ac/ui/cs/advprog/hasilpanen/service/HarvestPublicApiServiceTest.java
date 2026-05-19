@@ -96,4 +96,35 @@ class HarvestPublicApiServiceTest {
 
         verify(approveHarvestService).approve(new ApproveHarvestCommand(harvestId, 3L));
     }
+
+    @Test
+    void approveFailsWhenCurrentUserIsNotMandor() {
+        UUID harvestId = UUID.randomUUID();
+        when(authClient.getCurrentUserIdentity("Bearer token"))
+                .thenReturn(new HarvestPublicApiService.HarvestIdentity(2L, "buruh@mysawit.id", "Buruh", "BURUH"));
+
+        assertThatThrownBy(() -> service.approve(harvestId, "Bearer token"))
+                .isInstanceOf(RoleForbiddenException.class);
+    }
+
+    @Test
+    void rejectFailsWhenCurrentUserIsNotMandor() {
+        UUID harvestId = UUID.randomUUID();
+        when(authClient.getCurrentUserIdentity("Bearer token"))
+                .thenReturn(new HarvestPublicApiService.HarvestIdentity(2L, "buruh@mysawit.id", "Buruh", "BURUH"));
+
+        assertThatThrownBy(() -> service.reject(harvestId, "reason", "Bearer token"))
+                .isInstanceOf(RoleForbiddenException.class);
+    }
+
+    @Test
+    void submitFailsSafelyWhenAuthServiceRejectsToken() {
+        when(authClient.getCurrentUserIdentity("Bearer invalid"))
+                .thenThrow(new RuntimeException("401 from auth"));
+
+        assertThatThrownBy(() -> service.submit(
+                new HarvestPublicApiService.SubmitHarvestRequest(BigDecimal.ONE, "Panen", List.of("proof.jpg")),
+                "Bearer invalid"))
+                .isInstanceOf(AuthenticationRequiredException.class);
+    }
 }

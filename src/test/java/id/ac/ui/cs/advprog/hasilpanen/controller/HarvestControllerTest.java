@@ -15,6 +15,7 @@ import id.ac.ui.cs.advprog.hasilpanen.service.HarvestPublicApiService;
 import id.ac.ui.cs.advprog.hasilpanen.service.HarvestPublicApiService.HarvestIdentity;
 import id.ac.ui.cs.advprog.hasilpanen.service.HarvestPublicApiService.HarvestSubmissionResult;
 import id.ac.ui.cs.advprog.hasilpanen.service.HarvestPublicApiService.MyHarvestResult;
+import id.ac.ui.cs.advprog.hasilpanen.service.AuthenticationRequiredException;
 import id.ac.ui.cs.advprog.hasilpanen.service.RoleForbiddenException;
 import java.time.LocalDate;
 import java.util.List;
@@ -113,5 +114,53 @@ class HarvestControllerTest {
                         .content("{}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("BAD_REQUEST"));
+    }
+
+    @Test
+    void submitFailsWithUnauthorizedWhenAuthorizationHeaderMissing() throws Exception {
+        when(harvestPublicApiService.submit(any(), eq(null)))
+                .thenThrow(new AuthenticationRequiredException("missing Authorization header"));
+
+        mockMvc.perform(post("/harvests")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "kilogram": 100,
+                                  "reportText": "Panen hari ini",
+                                  "photos": ["proof-1.jpg"]
+                                }
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("UNAUTHORIZED"));
+    }
+
+    @Test
+    void approveFailsWithForbiddenWhenRoleIsNotMandor() throws Exception {
+        UUID harvestId = UUID.randomUUID();
+        org.mockito.Mockito.doThrow(new RoleForbiddenException("MANDOR role is required"))
+                .when(harvestPublicApiService).approve(harvestId, "Bearer token");
+
+        mockMvc.perform(post("/harvests/{harvestId}/approve", harvestId)
+                        .header("Authorization", "Bearer token"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("FORBIDDEN"));
+    }
+
+    @Test
+    void rejectFailsWithForbiddenWhenRoleIsNotMandor() throws Exception {
+        UUID harvestId = UUID.randomUUID();
+        org.mockito.Mockito.doThrow(new RoleForbiddenException("MANDOR role is required"))
+                .when(harvestPublicApiService).reject(harvestId, "not valid", "Bearer token");
+
+        mockMvc.perform(post("/harvests/{harvestId}/reject", harvestId)
+                        .header("Authorization", "Bearer token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "reason": "not valid"
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("FORBIDDEN"));
     }
 }
