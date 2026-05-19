@@ -100,7 +100,17 @@ public class HarvestPublicApiService {
         if (bearerToken == null || bearerToken.isBlank()) {
             throw new AuthenticationRequiredException("missing Authorization header");
         }
-        return authClient.getCurrentUserIdentity(bearerToken);
+        try {
+            HarvestIdentity identity = authClient.getCurrentUserIdentity(bearerToken);
+            if (identity == null || identity.id() == null || identity.role() == null || identity.role().isBlank()) {
+                throw new AuthenticationRequiredException("unable to resolve authenticated user");
+            }
+            return identity;
+        } catch (AuthenticationRequiredException ex) {
+            throw ex;
+        } catch (RuntimeException ex) {
+            throw new AuthenticationRequiredException("invalid or expired authentication token");
+        }
     }
 
     private void requireRole(HarvestIdentity user, String expectedRole) {

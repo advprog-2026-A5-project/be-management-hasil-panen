@@ -32,7 +32,7 @@ public class HarvestController {
 
     @PostMapping("/harvests")
     public HarvestPublicApiService.HarvestSubmissionResult submitHarvest(
-            @RequestHeader("Authorization") String authorization,
+            @RequestHeader(value = "Authorization", required = false) String authorization,
             @Valid @RequestBody SubmitHarvestRequest request) {
         return harvestPublicApiService.submit(
                 new HarvestPublicApiService.SubmitHarvestRequest(request.kilogram(), request.reportText(), request.photos()),
@@ -41,7 +41,7 @@ public class HarvestController {
 
     @GetMapping("/harvests/me")
     public List<HarvestPublicApiService.MyHarvestResult> myHarvests(
-            @RequestHeader("Authorization") String authorization,
+            @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestParam(required = false) LocalDate startDate,
             @RequestParam(required = false) LocalDate endDate,
             @RequestParam(required = false) HarvestStatus status) {
@@ -50,7 +50,7 @@ public class HarvestController {
 
     @GetMapping("/mandor/harvests")
     public List<MandorHarvestView> mandorHarvests(
-            @RequestHeader("Authorization") String authorization,
+            @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestParam(required = false) LocalDate harvestDate,
             @RequestParam(required = false) String buruhName) {
         return harvestPublicApiService.getMandorHarvests(harvestDate, buruhName, authorization);
@@ -58,14 +58,14 @@ public class HarvestController {
 
     @PostMapping("/harvests/{harvestId}/approve")
     public void approveHarvest(
-            @RequestHeader("Authorization") String authorization,
+            @RequestHeader(value = "Authorization", required = false) String authorization,
             @PathVariable UUID harvestId) {
         harvestPublicApiService.approve(harvestId, authorization);
     }
 
     @PostMapping("/harvests/{harvestId}/reject")
     public void rejectHarvest(
-            @RequestHeader("Authorization") String authorization,
+            @RequestHeader(value = "Authorization", required = false) String authorization,
             @PathVariable UUID harvestId,
             @Valid @RequestBody RejectHarvestRequest request) {
         harvestPublicApiService.reject(harvestId, request.reason(), authorization);
