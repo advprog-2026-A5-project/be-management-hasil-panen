@@ -2,7 +2,6 @@ package id.ac.ui.cs.advprog.hasilpanen.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
@@ -28,38 +27,45 @@ class RestIntegrationClientsTest {
     }
 
     @Test
-    void authClientReturnsAssignmentTrue() {
-        UUID mandorId = UUID.randomUUID();
-        UUID buruhId = UUID.randomUUID();
+    void authClientUsesCanonicalLongIdsForAssignmentLookup() {
+        long mandorId = 31L;
+        long buruhId = 17L;
         AuthServiceRestClient client = new AuthServiceRestClient("http://auth", restTemplate);
 
-        server.expect(requestTo("http://auth/internal/mandors/" + mandorId + "/buruh/" + buruhId + "/assignment"))
+        server.expect(requestTo("http://auth/internal/mandors/31/buruh/17/assignment"))
                 .andExpect(method(HttpMethod.GET))
                 .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer token"))
                 .andRespond(withSuccess("{\"assigned\":true}", MediaType.APPLICATION_JSON));
 
-        boolean assigned = client.isBuruhAssignedToMandor(
-                id.ac.ui.cs.advprog.hasilpanen.service.LegacyIdBridge.uuidToLong(buruhId),
-                id.ac.ui.cs.advprog.hasilpanen.service.LegacyIdBridge.uuidToLong(mandorId),
-                "Bearer token");
+        boolean assigned = client.isBuruhAssignedToMandor(buruhId, mandorId, "Bearer token");
 
         assertThat(assigned).isTrue();
     }
 
     @Test
-    void kebunClientReturnsAccessTrue() {
-        UUID mandorId = UUID.randomUUID();
-        KebunServiceRestClient client = new KebunServiceRestClient("http://kebun", restTemplate);
+    void authClientUsesCanonicalLongIdsForMandorBuruhListing() {
+        AuthServiceRestClient client = new AuthServiceRestClient("http://auth", restTemplate);
 
-        server.expect(requestTo("http://kebun/internal/mandors/" + mandorId + "/kebun"))
+        server.expect(requestTo("http://auth/internal/mandors/31/buruh"))
                 .andExpect(method(HttpMethod.GET))
                 .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer token"))
-                .andRespond(withSuccess("{\"active\":true,\"kebunCode\":\"KB001\"}", MediaType.APPLICATION_JSON));
+                .andRespond(withSuccess("""
+                        [{"id":17,"role":"BURUH"},{"id":18,"role":"BURUH"}]
+                        """, MediaType.APPLICATION_JSON));
 
-        boolean hasAccess = client.hasFarmAccess(
-                id.ac.ui.cs.advprog.hasilpanen.service.LegacyIdBridge.uuidToLong(mandorId),
-                "KB001",
-                "Bearer token");
+        assertThat(client.getBuruhUnderMandor(31L, "Bearer token")).containsExactlyInAnyOrder(17L, 18L);
+    }
+
+    @Test
+    void kebunClientUsesCanonicalLongIdsForFarmAccessLookup() {
+        KebunServiceRestClient client = new KebunServiceRestClient("http://kebun", restTemplate);
+
+        server.expect(requestTo("http://kebun/internal/mandors/31/kebun"))
+                .andExpect(method(HttpMethod.GET))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer token"))
+                .andRespond(withSuccess("{\"mandorId\":31,\"active\":true,\"kebunCode\":\"KB001\"}", MediaType.APPLICATION_JSON));
+
+        boolean hasAccess = client.hasFarmAccess(31L, "KB001", "Bearer token");
 
         assertThat(hasAccess).isTrue();
     }

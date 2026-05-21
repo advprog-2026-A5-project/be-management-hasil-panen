@@ -1,9 +1,7 @@
 package id.ac.ui.cs.advprog.hasilpanen.client;
 
 import id.ac.ui.cs.advprog.hasilpanen.service.HarvestPublicApiService;
-import id.ac.ui.cs.advprog.hasilpanen.service.LegacyIdBridge;
 import java.util.Map;
-import java.util.UUID;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -21,8 +19,7 @@ public class KebunServiceRestClient {
     }
 
     public HarvestPublicApiService.MandorKebunAssignment getKebunByMandor(Long mandorId, String bearerToken) {
-        UUID mandorUuid = LegacyIdBridge.longToUuid(mandorId);
-        String url = baseUrl + "/internal/mandors/" + mandorUuid + "/kebun";
+        String url = baseUrl + "/internal/mandors/" + mandorId + "/kebun";
         ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, withBearer(bearerToken), Map.class);
         Map body = response.getBody();
         if (body == null) {
