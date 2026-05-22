@@ -135,262 +135,262 @@ jobs:
   
 
     deploy-ec2-and-monitoring:
-    name: Deploy Hasil Panen and Monitoring to EC2
-    needs: buildAndTest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+      name: Deploy Hasil Panen and Monitoring to EC2
+      needs: buildAndTest
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      runs-on: ubuntu-latest
 
-    steps:
-      - name: Check out the Git repository
-        uses: actions/checkout@v4
+      steps:
+        - name: Check out the Git repository
+          uses: actions/checkout@v4
 
-      - name: Set up Java toolchain
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "21"
-          cache: gradle
+        - name: Set up Java toolchain
+          uses: actions/setup-java@v4
+          with:
+            distribution: temurin
+            java-version: "21"
+            cache: gradle
 
-      - name: Make gradlew executable
-        run: chmod +x ./gradlew
+        - name: Make gradlew executable
+          run: chmod +x ./gradlew
 
-      - name: Build deployable JAR
-        run: ./gradlew --no-daemon bootJar
+        - name: Build deployable JAR
+          run: ./gradlew --no-daemon bootJar
 
-      - name: Resolve deployable JAR
-        id: jar
-        shell: bash
-        run: |
-          set -euo pipefail
-          JAR_PATH="$(find build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-plain.jar' | head -n 1)"
+        - name: Resolve deployable JAR
+          id: jar
+          shell: bash
+          run: |
+            set -euo pipefail
+            JAR_PATH="$(find build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-plain.jar' | head -n 1)"
 
-          if [ -z "${JAR_PATH}" ]; then
-            echo "No deployable JAR found in build/libs"
-            ls -la build/libs || true
-            exit 1
-          fi
+            if [ -z "${JAR_PATH}" ]; then
+              echo "No deployable JAR found in build/libs"
+              ls -la build/libs || true
+              exit 1
+            fi
 
-          echo "jar_path=${JAR_PATH}" >> "${GITHUB_OUTPUT}"
-          echo "Resolved deployable JAR: ${JAR_PATH}"
+            echo "jar_path=${JAR_PATH}" >> "${GITHUB_OUTPUT}"
+            echo "Resolved deployable JAR: ${JAR_PATH}"
 
-      - name: Prepare SSH key
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key.pem
-          chmod 600 ~/.ssh/ec2_key.pem
+        - name: Prepare SSH key
+          shell: bash
+          run: |
+            set -euo pipefail
+            mkdir -p ~/.ssh
+            echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key.pem
+            chmod 600 ~/.ssh/ec2_key.pem
 
-      - name: Upload JAR to EC2
-        shell: bash
-        env:
-          EC2_HOST: ${{ secrets.EC2_HOST }}
-          EC2_USER: ${{ secrets.EC2_USER }}
-          JAR_PATH: ${{ steps.jar.outputs.jar_path }}
-        run: |
-          set -euo pipefail
-          scp -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem "${JAR_PATH}" "${EC2_USER}@${EC2_HOST}:/tmp/app.jar"
+        - name: Upload JAR to EC2
+          shell: bash
+          env:
+            EC2_HOST: ${{ secrets.EC2_HOST }}
+            EC2_USER: ${{ secrets.EC2_USER }}
+            JAR_PATH: ${{ steps.jar.outputs.jar_path }}
+          run: |
+            set -euo pipefail
+            scp -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem "${JAR_PATH}" "${EC2_USER}@${EC2_HOST}:/tmp/app.jar"
 
-      - name: Deploy app and monitoring on EC2
-        shell: bash
-        env:
-          EC2_HOST: ${{ secrets.EC2_HOST }}
-          EC2_USER: ${{ secrets.EC2_USER }}
-          EC2_APP_DIR: ${{ secrets.EC2_APP_DIR }}
-          EC2_SERVICE_NAME: ${{ secrets.EC2_SERVICE_NAME }}
-        run: |
-          set -euo pipefail
-
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem "${EC2_USER}@${EC2_HOST}" << EOF
+        - name: Deploy app and monitoring on EC2
+          shell: bash
+          env:
+            EC2_HOST: ${{ secrets.EC2_HOST }}
+            EC2_USER: ${{ secrets.EC2_USER }}
+            EC2_APP_DIR: ${{ secrets.EC2_APP_DIR }}
+            EC2_SERVICE_NAME: ${{ secrets.EC2_SERVICE_NAME }}
+          run: |
             set -euo pipefail
 
-            echo "Deploying Hasil Panen app..."
-            sudo mkdir -p "${EC2_APP_DIR}"
-            sudo install -m 644 /tmp/app.jar "${EC2_APP_DIR}/app.jar"
-            rm -f /tmp/app.jar
+            ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem "${EC2_USER}@${EC2_HOST}" << EOF
+              set -euo pipefail
 
-            echo "Restarting service ${EC2_SERVICE_NAME}..."
-            if ! sudo systemctl restart "${EC2_SERVICE_NAME}"; then
-              sudo journalctl -u "${EC2_SERVICE_NAME}" -n 120 --no-pager || true
-              exit 1
-            fi
+              echo "Deploying Hasil Panen app..."
+              sudo mkdir -p "${EC2_APP_DIR}"
+              sudo install -m 644 /tmp/app.jar "${EC2_APP_DIR}/app.jar"
+              rm -f /tmp/app.jar
 
-            sleep 10
+              echo "Restarting service ${EC2_SERVICE_NAME}..."
+              if ! sudo systemctl restart "${EC2_SERVICE_NAME}"; then
+                sudo journalctl -u "${EC2_SERVICE_NAME}" -n 120 --no-pager || true
+                exit 1
+              fi
 
-            if ! sudo systemctl is-active --quiet "${EC2_SERVICE_NAME}"; then
-              sudo systemctl --no-pager --full status "${EC2_SERVICE_NAME}" || true
-              sudo journalctl -u "${EC2_SERVICE_NAME}" -n 120 --no-pager || true
-              exit 1
-            fi
+              sleep 10
 
-            echo "Checking Hasil Panen health..."
-            if ! curl -fsS http://localhost:8082/actuator/health; then
-              sudo journalctl -u "${EC2_SERVICE_NAME}" -n 120 --no-pager || true
-              exit 1
-            fi
+              if ! sudo systemctl is-active --quiet "${EC2_SERVICE_NAME}"; then
+                sudo systemctl --no-pager --full status "${EC2_SERVICE_NAME}" || true
+                sudo journalctl -u "${EC2_SERVICE_NAME}" -n 120 --no-pager || true
+                exit 1
+              fi
 
-            echo "Checking Hasil Panen prometheus endpoint..."
-            if ! curl -fsS http://localhost:8082/actuator/prometheus > /dev/null; then
-              sudo journalctl -u "${EC2_SERVICE_NAME}" -n 120 --no-pager || true
-              exit 1
-            fi
+              echo "Checking Hasil Panen health..."
+              if ! curl -fsS http://localhost:8082/actuator/health; then
+                sudo journalctl -u "${EC2_SERVICE_NAME}" -n 120 --no-pager || true
+                exit 1
+              fi
 
-            echo "Installing Docker if needed..."
-            sudo dnf install -y docker
-            sudo systemctl enable docker
-            sudo systemctl start docker
+              echo "Checking Hasil Panen prometheus endpoint..."
+              if ! curl -fsS http://localhost:8082/actuator/prometheus > /dev/null; then
+                sudo journalctl -u "${EC2_SERVICE_NAME}" -n 120 --no-pager || true
+                exit 1
+              fi
 
-            echo "Preparing monitoring directory..."
-            sudo mkdir -p /opt/mysawit-monitoring/grafana/provisioning/datasources
-            sudo mkdir -p /opt/mysawit-monitoring/grafana/provisioning/dashboards
-            sudo mkdir -p /opt/mysawit-monitoring/grafana/dashboards
-            sudo chown -R ec2-user:ec2-user /opt/mysawit-monitoring
+              echo "Installing Docker if needed..."
+              sudo dnf install -y docker
+              sudo systemctl enable docker
+              sudo systemctl start docker
 
-            cat > /opt/mysawit-monitoring/prometheus.yml << 'PROMEOF'
-          global:
-            scrape_interval: 5s
+              echo "Preparing monitoring directory..."
+              sudo mkdir -p /opt/mysawit-monitoring/grafana/provisioning/datasources
+              sudo mkdir -p /opt/mysawit-monitoring/grafana/provisioning/dashboards
+              sudo mkdir -p /opt/mysawit-monitoring/grafana/dashboards
+              sudo chown -R ec2-user:ec2-user /opt/mysawit-monitoring
 
-          scrape_configs:
-            - job_name: "hasil-panen-service"
-              metrics_path: "/actuator/prometheus"
-              static_configs:
-                - targets: ["host.docker.internal:8082"]
-          PROMEOF
+              cat > /opt/mysawit-monitoring/prometheus.yml << 'PROMEOF'
+            global:
+              scrape_interval: 5s
 
-            cat > /opt/mysawit-monitoring/grafana/provisioning/datasources/prometheus.yml << 'DATASOURCEEOF'
-          apiVersion: 1
+            scrape_configs:
+              - job_name: "hasil-panen-service"
+                metrics_path: "/actuator/prometheus"
+                static_configs:
+                  - targets: ["host.docker.internal:8082"]
+            PROMEOF
 
-          datasources:
-            - name: Prometheus
-              type: prometheus
-              access: proxy
-              url: http://prometheus:9090
-              isDefault: true
-          DATASOURCEEOF
+              cat > /opt/mysawit-monitoring/grafana/provisioning/datasources/prometheus.yml << 'DATASOURCEEOF'
+            apiVersion: 1
 
-            cat > /opt/mysawit-monitoring/grafana/provisioning/dashboards/dashboards.yml << 'DASHBOARDPROVIDER'
-          apiVersion: 1
+            datasources:
+              - name: Prometheus
+                type: prometheus
+                access: proxy
+                url: http://prometheus:9090
+                isDefault: true
+            DATASOURCEEOF
 
-          providers:
-            - name: MySawit
-              orgId: 1
-              folder: MySawit
-              type: file
-              disableDeletion: false
-              editable: true
-              options:
-                path: /var/lib/grafana/dashboards
-          DASHBOARDPROVIDER
+              cat > /opt/mysawit-monitoring/grafana/provisioning/dashboards/dashboards.yml << 'DASHBOARDPROVIDER'
+            apiVersion: 1
 
-            cat > /opt/mysawit-monitoring/grafana/dashboards/hasil-panen-dashboard.json << 'DASHBOARDEOF'
-          {
-            "uid": "mysawit-hasil-panen",
-            "title": "MySawit Hasil Panen Monitoring",
-            "schemaVersion": 38,
-            "version": 1,
-            "refresh": "5s",
-            "panels": [
-              {
-                "type": "timeseries",
-                "title": "Hasil Panen Request Rate",
-                "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
-                "targets": [
-                  {
-                    "expr": "sum(rate(http_server_requests_seconds_count{job=\"hasil-panen-service\"}[1m]))",
-                    "refId": "A"
-                  }
-                ]
-              },
-              {
-                "type": "timeseries",
-                "title": "Hasil Panen 500 Error Rate",
-                "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
-                "targets": [
-                  {
-                    "expr": "sum(rate(http_server_requests_seconds_count{job=\"hasil-panen-service\",status=\"500\"}[1m]))",
-                    "refId": "A"
-                  }
-                ]
-              },
-              {
-                "type": "timeseries",
-                "title": "Hasil Panen JVM Memory Used",
-                "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
-                "targets": [
-                  {
-                    "expr": "sum(jvm_memory_used_bytes{job=\"hasil-panen-service\"})",
-                    "refId": "A"
-                  }
-                ]
-              },
-              {
-                "type": "timeseries",
-                "title": "Hasil Panen CPU Usage",
-                "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
-                "targets": [
-                  {
-                    "expr": "process_cpu_usage{job=\"hasil-panen-service\"}",
-                    "refId": "A"
-                  }
-                ]
-              }
-            ]
-          }
-          DASHBOARDEOF
+            providers:
+              - name: MySawit
+                orgId: 1
+                folder: MySawit
+                type: file
+                disableDeletion: false
+                editable: true
+                options:
+                  path: /var/lib/grafana/dashboards
+            DASHBOARDPROVIDER
 
-            cat > /opt/mysawit-monitoring/docker-compose.monitoring.yml << 'COMPOSEEOF'
-          services:
-            prometheus:
-              image: prom/prometheus:latest
-              container_name: mysawit-prometheus
-              restart: unless-stopped
-              ports:
-                - "9090:9090"
-              extra_hosts:
-                - "host.docker.internal:host-gateway"
-              volumes:
-                - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
-                - prometheus-data:/prometheus
-              command:
-                - "--config.file=/etc/prometheus/prometheus.yml"
+              cat > /opt/mysawit-monitoring/grafana/dashboards/hasil-panen-dashboard.json << 'DASHBOARDEOF'
+            {
+              "uid": "mysawit-hasil-panen",
+              "title": "MySawit Hasil Panen Monitoring",
+              "schemaVersion": 38,
+              "version": 1,
+              "refresh": "5s",
+              "panels": [
+                {
+                  "type": "timeseries",
+                  "title": "Hasil Panen Request Rate",
+                  "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+                  "targets": [
+                    {
+                      "expr": "sum(rate(http_server_requests_seconds_count{job=\"hasil-panen-service\"}[1m]))",
+                      "refId": "A"
+                    }
+                  ]
+                },
+                {
+                  "type": "timeseries",
+                  "title": "Hasil Panen 500 Error Rate",
+                  "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+                  "targets": [
+                    {
+                      "expr": "sum(rate(http_server_requests_seconds_count{job=\"hasil-panen-service\",status=\"500\"}[1m]))",
+                      "refId": "A"
+                    }
+                  ]
+                },
+                {
+                  "type": "timeseries",
+                  "title": "Hasil Panen JVM Memory Used",
+                  "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+                  "targets": [
+                    {
+                      "expr": "sum(jvm_memory_used_bytes{job=\"hasil-panen-service\"})",
+                      "refId": "A"
+                    }
+                  ]
+                },
+                {
+                  "type": "timeseries",
+                  "title": "Hasil Panen CPU Usage",
+                  "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+                  "targets": [
+                    {
+                      "expr": "process_cpu_usage{job=\"hasil-panen-service\"}",
+                      "refId": "A"
+                    }
+                  ]
+                }
+              ]
+            }
+            DASHBOARDEOF
 
-            grafana:
-              image: grafana/grafana:latest
-              container_name: mysawit-grafana
-              restart: unless-stopped
-              ports:
-                - "3001:3000"
-              environment:
-                - GF_SECURITY_ADMIN_USER=admin
-                - GF_SECURITY_ADMIN_PASSWORD=admin
-              volumes:
-                - grafana-data:/var/lib/grafana
-                - ./grafana/provisioning:/etc/grafana/provisioning:ro
-                - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
-              depends_on:
-                - prometheus
+              cat > /opt/mysawit-monitoring/docker-compose.monitoring.yml << 'COMPOSEEOF'
+            services:
+              prometheus:
+                image: prom/prometheus:latest
+                container_name: mysawit-prometheus
+                restart: unless-stopped
+                ports:
+                  - "9090:9090"
+                extra_hosts:
+                  - "host.docker.internal:host-gateway"
+                volumes:
+                  - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+                  - prometheus-data:/prometheus
+                command:
+                  - "--config.file=/etc/prometheus/prometheus.yml"
 
-          volumes:
-            prometheus-data:
-            grafana-data:
-          COMPOSEEOF
+              grafana:
+                image: grafana/grafana:latest
+                container_name: mysawit-grafana
+                restart: unless-stopped
+                ports:
+                  - "3001:3000"
+                environment:
+                  - GF_SECURITY_ADMIN_USER=admin
+                  - GF_SECURITY_ADMIN_PASSWORD=admin
+                volumes:
+                  - grafana-data:/var/lib/grafana
+                  - ./grafana/provisioning:/etc/grafana/provisioning:ro
+                  - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+                depends_on:
+                  - prometheus
 
-            cd /opt/mysawit-monitoring
+            volumes:
+              prometheus-data:
+              grafana-data:
+            COMPOSEEOF
 
-            echo "Starting Prometheus and Grafana..."
-            if docker compose version >/dev/null 2>&1; then
-              docker compose -f docker-compose.monitoring.yml up -d
-            else
-              sudo curl -L "https://github.com/docker/compose/releases/download/v2.27.0/docker-compose-linux-x86_64" -o /usr/local/bin/docker-compose
-              sudo chmod +x /usr/local/bin/docker-compose
-              docker-compose -f docker-compose.monitoring.yml up -d
-            fi
+              cd /opt/mysawit-monitoring
 
-            sleep 10
+              echo "Starting Prometheus and Grafana..."
+              if docker compose version >/dev/null 2>&1; then
+                docker compose -f docker-compose.monitoring.yml up -d
+              else
+                sudo curl -L "https://github.com/docker/compose/releases/download/v2.27.0/docker-compose-linux-x86_64" -o /usr/local/bin/docker-compose
+                sudo chmod +x /usr/local/bin/docker-compose
+                docker-compose -f docker-compose.monitoring.yml up -d
+              fi
 
-            echo "Checking Prometheus readiness..."
-            curl -f http://localhost:9090/-/ready
+              sleep 10
 
-            echo "Running containers:"
-            docker ps
-          EOF
+              echo "Checking Prometheus readiness..."
+              curl -f http://localhost:9090/-/ready
+
+              echo "Running containers:"
+              docker ps
+            EOF
