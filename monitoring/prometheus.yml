@@ -1,0 +1,9 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: "hasil-panen-service"
+    metrics_path: "/actuator/prometheus"
+    static_configs:
+      # Replace <HASIL_PANEN_HOST> with the deployed EC2 public DNS/IP for hasil panen.
+      - targets: ["<HASIL_PANEN_HOST>:8082"]
