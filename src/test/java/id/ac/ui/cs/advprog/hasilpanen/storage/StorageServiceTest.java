@@ -45,6 +45,51 @@ class StorageServiceTest {
     }
 
     @Test
+    void localStorageSanitizesUnsafeFilenameCharacters() throws Exception {
+        Path tempDir = Files.createTempDirectory("hasil-panen-storage-sanitize");
+        LocalStorageService service = new LocalStorageService(tempDir.toString());
+        MockMultipartFile file = new MockMultipartFile(
+                "photos",
+                "proof @#$ 1.jpg",
+                "image/jpeg",
+                "dummy-image".getBytes());
+
+        StoredFile stored = service.upload(file, "harvest-proofs");
+
+        assertThat(stored.originalFilename()).isEqualTo("proof @#$ 1.jpg");
+        assertThat(stored.key()).endsWith(".jpg");
+        assertThat(stored.key()).doesNotContain("..");
+    }
+
+    @Test
+    void localStorageRejectsTraversalFolderTarget() {
+        LocalStorageService service = new LocalStorageService("build/test-uploads");
+        MockMultipartFile file = new MockMultipartFile(
+                "photos",
+                "proof.jpg",
+                "image/jpeg",
+                "dummy-image".getBytes());
+
+        assertThatThrownBy(() -> service.upload(file, "../outside"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("invalid upload target path");
+    }
+
+    @Test
+    void localStorageRejectsEmptyFile() {
+        LocalStorageService service = new LocalStorageService("build/test-uploads");
+        MockMultipartFile file = new MockMultipartFile(
+                "photos",
+                "proof.jpg",
+                "image/jpeg",
+                new byte[0]);
+
+        assertThatThrownBy(() -> service.upload(file, "harvest-proofs"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("must not be empty");
+    }
+
+    @Test
     void cloudinaryStorageFailsFastWhenConfigMissing() {
         StorageProperties properties = new StorageProperties();
         properties.setProvider("cloudinary");
