@@ -1,6 +1,7 @@
 package id.ac.ui.cs.advprog.hasilpanen.security;
 
 import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -101,6 +102,24 @@ class SecurityIntegrationTest {
     }
 
     @Test
+    void actuatorHealthEndpointRemainsPublic() throws Exception {
+        mockMvc.perform(get("/actuator/health"))
+                .andExpect(result -> assertNotUnauthorizedOrForbidden(result.getResponse().getStatus()));
+    }
+
+    @Test
+    void actuatorInfoEndpointRemainsPublic() throws Exception {
+        mockMvc.perform(get("/actuator/info"))
+                .andExpect(result -> assertNotUnauthorizedOrForbidden(result.getResponse().getStatus()));
+    }
+
+    @Test
+    void actuatorPrometheusEndpointRemainsPublic() throws Exception {
+        mockMvc.perform(get("/actuator/prometheus"))
+                .andExpect(result -> assertNotUnauthorizedOrForbidden(result.getResponse().getStatus()));
+    }
+
+    @Test
     void internalEndpointRejectsWhenInternalTokenMissing() throws Exception {
         mockMvc.perform(get("/internal/harvests/{harvestId}/transport-eligibility", UUID.randomUUID()))
                 .andExpect(status().isUnauthorized());
@@ -126,5 +145,9 @@ class SecurityIntegrationTest {
                 .setExpiration(new Date(System.currentTimeMillis() + 60000))
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    private void assertNotUnauthorizedOrForbidden(int statusCode) {
+        assertTrue(statusCode != 401 && statusCode != 403);
     }
 }
