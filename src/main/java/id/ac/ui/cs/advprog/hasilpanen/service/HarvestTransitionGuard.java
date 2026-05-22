@@ -14,11 +14,11 @@ final class HarvestTransitionGuard {
             ApprovalRepository repository,
             MandorBuruhClient mandorBuruhClient,
             UUID harvestId,
-            UUID mandorId) {
+            Long mandorId) {
         HarvestReport report = repository.findById(harvestId)
                 .orElseThrow(() -> new HarvestNotFoundException("harvest not found"));
-        Set<UUID> assigned = mandorBuruhClient.getAssignedBuruhIds(mandorId);
-        MandorAssignmentPolicy.ensureAssigned(report.getBuruhId(), assigned);
+        Set<Long> assigned = mandorBuruhClient.getAssignedBuruhIds(mandorId);
+        MandorAssignmentPolicy.ensureAssigned(report.getBuruhAuthId(), assigned);
         ApprovalPolicy.ensurePending(report);
         return report;
     }

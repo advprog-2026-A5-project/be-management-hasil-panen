@@ -1,58 +1,46 @@
 # Manajemen Hasil Panen - Deployment
 
-## Local Run
-
-1. configure environment variables (see `.env.example` if present)
-2. run tests:
+## Verify locally
 
 ```bash
 ./gradlew clean test
-```
-
-3. run application:
-
-```bash
-./gradlew bootRun
+./gradlew clean build
 ```
 
 ## Docker
 
-Build image:
-
 ```bash
-docker build -t hasil-panen-service:local .
+docker build -t mysawit-hasil-panen .
 ```
 
-Run stack:
+## Runtime environment variables
 
-```bash
-docker compose up -d
-```
+### Core
+- `PORT`
+- `SPRING_PROFILES_ACTIVE` (`prod` for deployment)
+- `CORS_ALLOWED_ORIGINS`
 
-The compose setup is intended for local service + PostgreSQL development.
+### Database
+- `DATABASE_URL` or `SPRING_DATASOURCE_URL`
+- `DB_USERNAME` / `SPRING_DATASOURCE_USERNAME`
+- `DB_PASSWORD` / `SPRING_DATASOURCE_PASSWORD`
 
-## AWS Readiness Handoff
+### External service URLs
+- `AUTH_SERVICE_BASE_URL`
+- `AUTH_INTERNAL_SERVICE_TOKEN`
+- `KEBUN_SERVICE_BASE_URL`
+- `PAYMENT_SERVICE_BASE_URL`
+- `PAYROLL_ENDPOINT`
 
-IaC scaffolding is prepared under:
+### Storage
+- `STORAGE_PROVIDER` (`local` or `cloudinary`)
+- `LOCAL_STORAGE_ROOT`
+- `MAX_UPLOAD_SIZE_MB`
+- `CLOUDINARY_CLOUD_NAME`
+- `CLOUDINARY_API_KEY`
+- `CLOUDINARY_API_SECRET`
 
-- `infrastructure/terraform`
-- `infrastructure/aws`
-
-Expected target architecture:
-
-- ECR image repository
-- ECS service
-- RDS PostgreSQL
-- ALB + security groups
-- CloudWatch logs
-
-Apply/deploy is intentionally left to the infra owner team with appropriate AWS credentials.
-
-## Migration Strategy
-
-Schema migration SQL is located at:
-
-- `src/main/resources/db/migration/V1__create_harvest_schema.sql`
-
-Deploy pipelines should execute migration before routing production traffic.
-
+## Notes
+- Flyway migrations run on startup.
+- Approval emits outbox payroll events and publisher dispatches asynchronously.
+- Use `storage.provider=local` for local dev/test when Cloudinary secrets are unavailable.

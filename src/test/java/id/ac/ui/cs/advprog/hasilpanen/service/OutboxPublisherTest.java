@@ -56,6 +56,23 @@ class OutboxPublisherTest {
     }
 
     @Test
+    void testOutboxPublisherDoesNotRetryFailedEventFromInMemoryRepository() {
+        InMemoryPublishableOutboxRepository repository = new InMemoryPublishableOutboxRepository();
+        OutboxEvent failed = event("FAILED", 2, null);
+        repository.save(failed);
+
+        RecordingEventPublisherTransport transport = new RecordingEventPublisherTransport(true);
+        OutboxPublisher publisher = new OutboxPublisher(repository, transport);
+
+        publisher.publishPending();
+
+        OutboxEvent updated = repository.findById(failed.eventId()).orElseThrow();
+        assertThat(updated.status()).isEqualTo("FAILED");
+        assertThat(updated.retryCount()).isEqualTo(2);
+        assertThat(transport.publishedEvents()).isEmpty();
+    }
+
+    @Test
     void testOutboxPublisherDoesNotRepublishSentEvents() {
         InMemoryPublishableOutboxRepository repository = new InMemoryPublishableOutboxRepository();
         OutboxEvent sent = event("SENT", 0, Instant.now());

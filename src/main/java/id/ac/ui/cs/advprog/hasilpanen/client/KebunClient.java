@@ -1,8 +1,14 @@
 package id.ac.ui.cs.advprog.hasilpanen.client;
 
-import java.util.UUID;
-
 public interface KebunClient {
 
-    boolean hasFarmAccess(UUID mandorId, UUID farmId);
+    boolean hasFarmAccess(Long mandorId, String kebunCode);
+
+    default boolean hasFarmAccess(Long mandorId, String kebunCode, String bearerToken) {
+        return hasFarmAccess(mandorId, kebunCode);
+    }
+
+    default boolean kebunExistsByCode(String kebunCode, String bearerToken) {
+        return kebunCode != null && !kebunCode.isBlank();
+    }
 }

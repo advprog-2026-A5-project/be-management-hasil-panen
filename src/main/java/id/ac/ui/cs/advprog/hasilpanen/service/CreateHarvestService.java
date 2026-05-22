@@ -2,14 +2,22 @@ package id.ac.ui.cs.advprog.hasilpanen.service;
 
 import id.ac.ui.cs.advprog.hasilpanen.domain.HarvestReport;
 import id.ac.ui.cs.advprog.hasilpanen.repository.HarvestReportRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
 import java.time.LocalDate;
-import java.util.UUID;
 import java.util.function.Supplier;
 
+@Service
 public class CreateHarvestService {
 
     private final HarvestReportRepository repository;
     private final Supplier<LocalDate> dateSupplier;
+
+    @Autowired
+    public CreateHarvestService(HarvestReportRepository repository) {
+        this(repository, LocalDate::now);
+    }
 
     public CreateHarvestService(HarvestReportRepository repository, Supplier<LocalDate> dateSupplier) {
         this.repository = repository;
@@ -24,8 +32,11 @@ public class CreateHarvestService {
             }
 
             HarvestReport report = HarvestReport.submit(
-                    UUID.randomUUID(),
+                    java.util.UUID.randomUUID(),
                     command.buruhId(),
+                    command.mandorId(),
+                    command.kebunCode(),
+                    command.kebunId(),
                     today,
                     command.kilogram(),
                     command.reportText(),

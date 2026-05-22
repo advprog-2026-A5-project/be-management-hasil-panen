@@ -82,14 +82,35 @@ class HarvestReportDomainTest {
     void testHarvestReportRejectionRequiresReason() {
         HarvestReport report = HarvestReport.submit(
                 UUID.randomUUID(),
-                UUID.randomUUID(),
+                2L,
+                3L,
+                "KB001",
+                null,
                 LocalDate.now(),
                 BigDecimal.TEN,
                 "valid",
                 List.of("https://a"));
 
-        assertThatThrownBy(() -> report.reject(UUID.randomUUID(), "  "))
+        assertThatThrownBy(() -> report.reject(3L, "  "))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("reason");
+    }
+
+    @Test
+    void testHarvestReportStoresAuthIdsAndKebunSnapshot() {
+        HarvestReport report = HarvestReport.submit(
+                UUID.randomUUID(),
+                10L,
+                20L,
+                "KB-ALPHA",
+                null,
+                LocalDate.now(),
+                BigDecimal.TEN,
+                "valid",
+                List.of("https://a"));
+
+        assertThat(report.getBuruhAuthId()).isEqualTo(10L);
+        assertThat(report.getMandorIdSnapshot()).isEqualTo(20L);
+        assertThat(report.getKebunCodeSnapshot()).isEqualTo("KB-ALPHA");
     }
 }

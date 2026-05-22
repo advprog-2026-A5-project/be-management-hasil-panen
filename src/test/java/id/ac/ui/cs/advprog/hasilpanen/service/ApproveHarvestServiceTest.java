@@ -28,7 +28,8 @@ class ApproveHarvestServiceTest {
         ApproveHarvestService service = new ApproveHarvestService(
                 approvalRepository,
                 outboxRepository,
-                new StubMandorBuruhClient(mandorId, List.of(buruhId)));
+                new StubMandorBuruhClient(mandorId, List.of(buruhId)),
+                new StubKebunClient(true));
 
         service.approve(new ApproveHarvestCommand(report.getHarvestId(), mandorId));
 
@@ -41,7 +42,8 @@ class ApproveHarvestServiceTest {
         ApproveHarvestService service = new ApproveHarvestService(
                 new InMemoryApprovalRepository(),
                 new InMemoryOutboxEventRepository(),
-                new StubMandorBuruhClient(UUID.randomUUID(), List.of()));
+                new StubMandorBuruhClient(UUID.randomUUID(), List.of()),
+                new StubKebunClient(true));
 
         assertThatThrownBy(() -> service.approve(new ApproveHarvestCommand(UUID.randomUUID(), UUID.randomUUID())))
                 .isInstanceOf(HarvestNotFoundException.class);
@@ -58,7 +60,8 @@ class ApproveHarvestServiceTest {
         ApproveHarvestService service = new ApproveHarvestService(
                 approvalRepository,
                 new InMemoryOutboxEventRepository(),
-                new StubMandorBuruhClient(mandorId, List.of()));
+                new StubMandorBuruhClient(mandorId, List.of()),
+                new StubKebunClient(true));
 
         assertThatThrownBy(() -> service.approve(new ApproveHarvestCommand(report.getHarvestId(), mandorId)))
                 .isInstanceOf(MandorUnauthorizedAccessException.class);
@@ -77,7 +80,8 @@ class ApproveHarvestServiceTest {
         ApproveHarvestService service = new ApproveHarvestService(
                 approvalRepository,
                 new InMemoryOutboxEventRepository(),
-                new StubMandorBuruhClient(mandorId, List.of(buruhId)));
+                new StubMandorBuruhClient(mandorId, List.of(buruhId)),
+                new StubKebunClient(true));
 
         assertThatThrownBy(() -> service.approve(new ApproveHarvestCommand(report.getHarvestId(), mandorId)))
                 .isInstanceOf(HarvestTerminalStatusException.class);
@@ -96,7 +100,8 @@ class ApproveHarvestServiceTest {
         ApproveHarvestService service = new ApproveHarvestService(
                 approvalRepository,
                 new InMemoryOutboxEventRepository(),
-                new StubMandorBuruhClient(mandorId, List.of(buruhId)));
+                new StubMandorBuruhClient(mandorId, List.of(buruhId)),
+                new StubKebunClient(true));
 
         assertThatThrownBy(() -> service.approve(new ApproveHarvestCommand(report.getHarvestId(), mandorId)))
                 .isInstanceOf(HarvestTerminalStatusException.class);
@@ -115,12 +120,22 @@ class ApproveHarvestServiceTest {
         ApproveHarvestService service = new ApproveHarvestService(
                 approvalRepository,
                 outboxRepository,
-                new StubMandorBuruhClient(mandorId, List.of(buruhId)));
+                new StubMandorBuruhClient(mandorId, List.of(buruhId)),
+                new StubKebunClient(true));
 
         service.approve(new ApproveHarvestCommand(report.getHarvestId(), mandorId));
 
         assertThat(outboxRepository.findAll()).hasSize(1);
-        assertThat(outboxRepository.findAll().getFirst().eventType()).isEqualTo("PAYROLL_TRIGGERED");
+        OutboxEvent event = outboxRepository.findAll().getFirst();
+        assertThat(event.eventType()).isEqualTo("harvest.approved.v1");
+        assertThat(event.payload()).contains("\"eventType\":\"harvest.approved.v1\"");
+        assertThat(event.payload()).contains("\"harvestId\":\"" + report.getHarvestId() + "\"");
+        assertThat(event.payload()).contains("\"buruhId\":" + report.getBuruhAuthId());
+        assertThat(event.payload()).contains("\"mandorId\":" + LegacyIdBridge.uuidToLong(mandorId));
+        assertThat(event.payload()).contains("\"kebunCode\":\"KB001\"");
+        assertThat(event.payload()).contains("\"harvestDate\":\"2026-05-10\"");
+        assertThat(event.payload()).contains("\"kilogram\":120");
+        assertThat(event.payload()).contains("\"idempotencyKey\":\"");
     }
 
     @Test
@@ -136,7 +151,8 @@ class ApproveHarvestServiceTest {
         ApproveHarvestService service = new ApproveHarvestService(
                 approvalRepository,
                 outboxRepository,
-                new StubMandorBuruhClient(mandorId, List.of(buruhId)));
+                new StubMandorBuruhClient(mandorId, List.of(buruhId)),
+                new StubKebunClient(true));
 
         int threads = 10;
         var executor = Executors.newFixedThreadPool(threads);
@@ -172,10 +188,54 @@ class ApproveHarvestServiceTest {
     private HarvestReport report(UUID buruhId) {
         return HarvestReport.submit(
                 UUID.randomUUID(),
-                buruhId,
+                LegacyIdBridge.uuidToLong(buruhId),
+                LegacyIdBridge.uuidToLong(UUID.randomUUID()),
+                "KB001",
+                null,
                 LocalDate.of(2026, 5, 10),
                 BigDecimal.valueOf(120),
                 "Panen valid",
                 List.of("https://photo"));
+    }
+
+    @Test
+    void testApproveHarvestFailsIfMandorKebunMismatch() {
+        UUID mandorId = UUID.randomUUID();
+        UUID buruhId = UUID.randomUUID();
+        HarvestReport report = report(buruhId);
+
+        InMemoryApprovalRepository approvalRepository = new InMemoryApprovalRepository();
+        approvalRepository.save(report);
+
+        ApproveHarvestService service = new ApproveHarvestService(
+                approvalRepository,
+                new InMemoryOutboxEventRepository(),
+                new StubMandorBuruhClient(mandorId, List.of(buruhId)),
+                new StubKebunClient(false));
+
+        assertThatThrownBy(() -> service.approve(new ApproveHarvestCommand(report.getHarvestId(), mandorId)))
+                .isInstanceOf(MandorUnauthorizedAccessException.class);
+    }
+
+    @Test
+    void testApproveHarvestFailsSafelyWhenAuthClientUnavailable() {
+        UUID mandorId = UUID.randomUUID();
+        UUID buruhId = UUID.randomUUID();
+        HarvestReport report = report(buruhId);
+
+        InMemoryApprovalRepository approvalRepository = new InMemoryApprovalRepository();
+        approvalRepository.save(report);
+
+        ApproveHarvestService service = new ApproveHarvestService(
+                approvalRepository,
+                new InMemoryOutboxEventRepository(),
+                m -> {
+                    throw new RuntimeException("auth unavailable");
+                },
+                new StubKebunClient(true));
+
+        assertThatThrownBy(() -> service.approve(new ApproveHarvestCommand(report.getHarvestId(), mandorId)))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("auth unavailable");
     }
 }

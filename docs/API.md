@@ -1,54 +1,56 @@
 # Manajemen Hasil Panen - API
 
-## Implemented Endpoint
+## Base Path
 
-### Internal Transport Eligibility
+Compatible routes are exposed at both:
+- `/...` (legacy)
+- `/api/hasil-panen/...` (recommended)
 
-`GET /internal/harvests/{harvestId}/transport-eligibility`
+## Endpoints
 
-Response shape:
-
-```json
-{
-  "harvestId": "uuid",
-  "eligible": true,
-  "status": "APPROVED",
-  "kilogram": 125.5
-}
-```
-
-Rules:
-
-- `APPROVED` -> `eligible=true`
-- `PENDING` or `REJECTED` -> `eligible=false`
-- unknown harvest -> `404 Not Found`
-
-## Error Contract
-
-Global error handling returns:
-
-- `400 Bad Request`
-- `403 Forbidden`
-- `404 Not Found`
-- `409 Conflict`
-- `500 Internal Server Error`
-
-Error body contains:
-
-- `timestamp`
-- `status`
-- `error`
-- `message`
-- `path`
-
-## Planned Public Endpoints (Contract Target)
-
-The following are documented as target contract for next increments:
-
+### Create harvest report (Buruh)
 - `POST /harvests`
-- `GET /harvests/me`
-- `GET /mandor/harvests`
-- `GET /mandor/buruh/{buruhId}/harvests`
+- Supports:
+  - `application/json` body with `kilogram`, `reportText`, `photos` (URL list)
+  - `multipart/form-data` with `kilogram`, `reportText`, and `photos[]` files
+- Returns `201 Created`
+- Enforces one report per Buruh per day
+
+### Buruh own history
+- `GET /harvests/me?startDate=&endDate=&status=`
+
+### Harvest detail
+- `GET /harvests/{harvestId}`
+
+### Mandor harvest history
+- `GET /mandor/harvests?harvestDate=&buruhName=`
+
+### Mandor specific Buruh history
+- `GET /mandor/buruh/{buruhId}/harvests?harvestDate=`
+
+### Approve / reject
 - `POST /harvests/{harvestId}/approve`
 - `POST /harvests/{harvestId}/reject`
 
+### Shipment eligibility list
+- `GET /harvest-reports/eligible-for-shipment`
+
+### Internal transport eligibility by report
+- `GET /internal/harvests/{harvestId}/transport-eligibility`
+
+## Status model
+- `PENDING`
+- `APPROVED`
+- `REJECTED`
+
+## Error contract
+
+```json
+{
+  "timestamp": "...",
+  "status": 400,
+  "error": "BAD_REQUEST",
+  "message": "...",
+  "path": "/harvests"
+}
+```

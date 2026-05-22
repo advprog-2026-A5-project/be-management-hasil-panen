@@ -2,6 +2,7 @@ package id.ac.ui.cs.advprog.hasilpanen.service;
 
 import id.ac.ui.cs.advprog.hasilpanen.domain.HarvestReport;
 import id.ac.ui.cs.advprog.hasilpanen.domain.HarvestStatus;
+import java.util.UUID;
 
 final class ApprovalPolicy {
 
@@ -14,7 +15,23 @@ final class ApprovalPolicy {
         }
     }
 
-    static String payrollPayload(HarvestReport report) {
-        return "{\"harvestId\":\"" + report.getHarvestId() + "\"}";
+    static String payrollPayload(HarvestReport report, UUID eventId) {
+        String approvedAt = report.getApprovedAt() == null ? "" : report.getApprovedAt().toString();
+        String kebunId = report.getKebunIdSnapshot() == null ? "null" : "\"" + report.getKebunIdSnapshot() + "\"";
+        String idempotencyKey = "harvest-approved:" + report.getHarvestId();
+
+        return "{"
+                + "\"eventId\":\"" + eventId + "\","
+                + "\"eventType\":\"harvest.approved.v1\","
+                + "\"harvestId\":\"" + report.getHarvestId() + "\","
+                + "\"buruhId\":" + report.getBuruhAuthId() + ","
+                + "\"mandorId\":" + report.getApprovedBy() + ","
+                + "\"kebunId\":" + kebunId + ","
+                + "\"kebunCode\":\"" + report.getKebunCodeSnapshot() + "\","
+                + "\"harvestDate\":\"" + report.getHarvestDate() + "\","
+                + "\"kilogram\":" + report.getKilogram().toPlainString() + ","
+                + "\"approvedAt\":\"" + approvedAt + "\","
+                + "\"idempotencyKey\":\"" + idempotencyKey + "\""
+                + "}";
     }
 }

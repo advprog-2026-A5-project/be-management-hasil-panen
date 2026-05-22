@@ -1,9 +1,11 @@
 package id.ac.ui.cs.advprog.hasilpanen.service;
 
-import id.ac.ui.cs.advprog.hasilpanen.domain.HarvestReport;
+import org.springframework.stereotype.Service;
+
 import java.util.Comparator;
 import java.util.List;
 
+@Service
 public class GetMyHarvestHistoryService {
 
     private final HarvestHistoryRepository repository;
@@ -13,9 +15,9 @@ public class GetMyHarvestHistoryService {
     }
 
     public MyHarvestHistoryResult getMyHistory(MyHarvestHistoryQuery query) {
-        List<HarvestReport> filtered = repository.findByBuruhId(query.buruhId()).stream()
+        List<id.ac.ui.cs.advprog.hasilpanen.domain.HarvestReport> filtered = repository.findByBuruhId(query.buruhId()).stream()
                 .filter(report -> HarvestHistoryFilter.matches(report, query))
-                .sorted(Comparator.comparing(HarvestReport::getHarvestDate).reversed())
+                .sorted(Comparator.comparing(id.ac.ui.cs.advprog.hasilpanen.domain.HarvestReport::getHarvestDate).reversed())
                 .toList();
 
         int fromIndex = Math.min(query.page() * query.size(), filtered.size());

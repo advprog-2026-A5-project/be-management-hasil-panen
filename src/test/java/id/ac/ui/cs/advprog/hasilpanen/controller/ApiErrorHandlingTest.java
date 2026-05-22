@@ -28,14 +28,35 @@ class ApiErrorHandlingTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("BAD_REQUEST"));
+                .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Request body is invalid"))
+                .andExpect(jsonPath("$.path").value("/test/validation"))
+                .andExpect(jsonPath("$.timestamp").exists());
     }
 
     @Test
     void testAPIReturns403ForUnauthorizedMandor() throws Exception {
         mockMvc.perform(get("/test/unauthorized-mandor"))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.error").value("FORBIDDEN"));
+                .andExpect(jsonPath("$.error").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.status").value(403));
+    }
+
+    @Test
+    void testAPIReturns403ForRoleForbidden() throws Exception {
+        mockMvc.perform(get("/test/role-forbidden"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.message").value("wrong role"));
+    }
+
+    @Test
+    void testAPIReturns401ForMissingAuth() throws Exception {
+        mockMvc.perform(get("/test/auth-required"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.status").value(401));
     }
 
     @Test
@@ -55,6 +76,45 @@ class ApiErrorHandlingTest {
     @Test
     void testAPIReturns404ForNotFound() throws Exception {
         mockMvc.perform(get("/test/not-found"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("NOT_FOUND"));
+    }
+
+    @Test
+    void testAPIReturns400ForIllegalArgument() throws Exception {
+        mockMvc.perform(get("/test/illegal-arg"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").value("bad input"));
+    }
+
+    @Test
+    void testAPIReturns409ForDataIntegrityConflict() throws Exception {
+        mockMvc.perform(get("/test/data-conflict"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("CONFLICT"))
+                .andExpect(jsonPath("$.message").value("conflict with existing data"));
+    }
+
+    @Test
+    void testAPIReturns400ForUploadSizeExceeded() throws Exception {
+        mockMvc.perform(get("/test/upload-too-large"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").value("uploaded file exceeds configured max size"));
+    }
+
+    @Test
+    void testAPIReturns500ForUnexpectedError() throws Exception {
+        mockMvc.perform(get("/test/internal"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.error").value("INTERNAL_SERVER_ERROR"))
+                .andExpect(jsonPath("$.message").value("Unexpected error"));
+    }
+
+    @Test
+    void testAPIReturns404ForUnknownRoute() throws Exception {
+        mockMvc.perform(get("/test/does-not-exist"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("NOT_FOUND"));
     }

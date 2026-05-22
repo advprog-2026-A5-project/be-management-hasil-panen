@@ -22,12 +22,17 @@ class CreateHarvestServiceTest {
         CreateHarvestService service = new CreateHarvestService(repository, () -> LocalDate.of(2026, 5, 15));
 
         HarvestReport report = service.createHarvest(new CreateHarvestCommand(
-                UUID.randomUUID(),
+                2L,
+                3L,
+                "KB001",
+                null,
                 BigDecimal.valueOf(125.5),
                 "Panen blok A berjalan lancar.",
                 List.of("https://storage.example.com/photo-1.jpg")));
 
         assertThat(report).isNotNull();
+        assertThat(report.getMandorIdSnapshot()).isEqualTo(3L);
+        assertThat(report.getKebunCodeSnapshot()).isEqualTo("KB001");
     }
 
     @Test

@@ -25,13 +25,18 @@ class RejectHarvestServiceTest {
         InMemoryApprovalRepository repository = new InMemoryApprovalRepository();
         repository.save(report);
 
-        RejectHarvestService service = new RejectHarvestService(repository, new StubMandorBuruhClient(mandorId, List.of(buruhId)));
+        RejectHarvestService service = new RejectHarvestService(
+                repository,
+                new StubMandorBuruhClient(mandorId, List.of(buruhId)),
+                new StubKebunClient(true));
 
         service.reject(new RejectHarvestCommand(report.getHarvestId(), mandorId, "Foto tidak valid"));
 
         HarvestReport updated = repository.findById(report.getHarvestId()).orElseThrow();
         assertThat(updated.getStatus()).isEqualTo(HarvestStatus.REJECTED);
         assertThat(updated.getRejectionReason()).isEqualTo("Foto tidak valid");
+        assertThat(updated.getApprovedAt()).isNull();
+        assertThat(updated.getApprovedBy()).isNull();
     }
 
     @Test
@@ -43,7 +48,10 @@ class RejectHarvestServiceTest {
         InMemoryApprovalRepository repository = new InMemoryApprovalRepository();
         repository.save(report);
 
-        RejectHarvestService service = new RejectHarvestService(repository, new StubMandorBuruhClient(mandorId, List.of(buruhId)));
+        RejectHarvestService service = new RejectHarvestService(
+                repository,
+                new StubMandorBuruhClient(mandorId, List.of(buruhId)),
+                new StubKebunClient(true));
 
         assertThatThrownBy(() -> service.reject(new RejectHarvestCommand(report.getHarvestId(), mandorId, "  ")))
                 .isInstanceOf(IllegalArgumentException.class);
@@ -57,7 +65,10 @@ class RejectHarvestServiceTest {
         InMemoryApprovalRepository repository = new InMemoryApprovalRepository();
         repository.save(report);
 
-        RejectHarvestService service = new RejectHarvestService(repository, new StubMandorBuruhClient(mandorId, List.of()));
+        RejectHarvestService service = new RejectHarvestService(
+                repository,
+                new StubMandorBuruhClient(mandorId, List.of()),
+                new StubKebunClient(true));
 
         assertThatThrownBy(() -> service.reject(new RejectHarvestCommand(report.getHarvestId(), mandorId, "reason")))
                 .isInstanceOf(MandorUnauthorizedAccessException.class);
@@ -73,7 +84,10 @@ class RejectHarvestServiceTest {
         InMemoryApprovalRepository repository = new InMemoryApprovalRepository();
         repository.save(report);
 
-        RejectHarvestService service = new RejectHarvestService(repository, new StubMandorBuruhClient(mandorId, List.of(buruhId)));
+        RejectHarvestService service = new RejectHarvestService(
+                repository,
+                new StubMandorBuruhClient(mandorId, List.of(buruhId)),
+                new StubKebunClient(true));
 
         assertThatThrownBy(() -> service.reject(new RejectHarvestCommand(report.getHarvestId(), mandorId, "reason")))
                 .isInstanceOf(HarvestTerminalStatusException.class);
@@ -89,7 +103,10 @@ class RejectHarvestServiceTest {
         InMemoryApprovalRepository repository = new InMemoryApprovalRepository();
         repository.save(report);
 
-        RejectHarvestService service = new RejectHarvestService(repository, new StubMandorBuruhClient(mandorId, List.of(buruhId)));
+        RejectHarvestService service = new RejectHarvestService(
+                repository,
+                new StubMandorBuruhClient(mandorId, List.of(buruhId)),
+                new StubKebunClient(true));
 
         assertThatThrownBy(() -> service.reject(new RejectHarvestCommand(report.getHarvestId(), mandorId, "reason")))
                 .isInstanceOf(HarvestTerminalStatusException.class);
@@ -105,7 +122,10 @@ class RejectHarvestServiceTest {
         repository.save(report);
         InMemoryOutboxEventRepository outbox = new InMemoryOutboxEventRepository();
 
-        RejectHarvestService service = new RejectHarvestService(repository, new StubMandorBuruhClient(mandorId, List.of(buruhId)));
+        RejectHarvestService service = new RejectHarvestService(
+                repository,
+                new StubMandorBuruhClient(mandorId, List.of(buruhId)),
+                new StubKebunClient(true));
 
         service.reject(new RejectHarvestCommand(report.getHarvestId(), mandorId, "not valid"));
 
@@ -124,10 +144,12 @@ class RejectHarvestServiceTest {
         ApproveHarvestService approveService = new ApproveHarvestService(
                 repository,
                 new InMemoryOutboxEventRepository(),
-                new StubMandorBuruhClient(mandorId, List.of(buruhId)));
+                new StubMandorBuruhClient(mandorId, List.of(buruhId)),
+                new StubKebunClient(true));
         RejectHarvestService rejectService = new RejectHarvestService(
                 repository,
-                new StubMandorBuruhClient(mandorId, List.of(buruhId)));
+                new StubMandorBuruhClient(mandorId, List.of(buruhId)),
+                new StubKebunClient(true));
 
         CountDownLatch ready = new CountDownLatch(2);
         CountDownLatch start = new CountDownLatch(1);
@@ -168,10 +190,31 @@ class RejectHarvestServiceTest {
     private HarvestReport report(UUID buruhId) {
         return HarvestReport.submit(
                 UUID.randomUUID(),
-                buruhId,
+                LegacyIdBridge.uuidToLong(buruhId),
+                LegacyIdBridge.uuidToLong(UUID.randomUUID()),
+                "KB001",
+                null,
                 LocalDate.of(2026, 5, 11),
                 BigDecimal.valueOf(100),
                 "panen",
                 List.of("https://photo"));
+    }
+
+    @Test
+    void testRejectHarvestFailsIfMandorKebunMismatch() {
+        UUID mandorId = UUID.randomUUID();
+        UUID buruhId = UUID.randomUUID();
+        HarvestReport report = report(buruhId);
+
+        InMemoryApprovalRepository repository = new InMemoryApprovalRepository();
+        repository.save(report);
+
+        RejectHarvestService service = new RejectHarvestService(
+                repository,
+                new StubMandorBuruhClient(mandorId, List.of(buruhId)),
+                new StubKebunClient(false));
+
+        assertThatThrownBy(() -> service.reject(new RejectHarvestCommand(report.getHarvestId(), mandorId, "reason")))
+                .isInstanceOf(MandorUnauthorizedAccessException.class);
     }
 }

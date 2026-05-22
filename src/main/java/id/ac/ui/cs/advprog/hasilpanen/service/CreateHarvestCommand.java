@@ -5,8 +5,19 @@ import java.util.List;
 import java.util.UUID;
 
 public record CreateHarvestCommand(
-        UUID buruhId,
+        Long buruhId,
+        Long mandorId,
+        String kebunCode,
+        String kebunId,
         BigDecimal kilogram,
         String reportText,
         List<String> photos) {
+
+    public CreateHarvestCommand(
+            UUID buruhId,
+            BigDecimal kilogram,
+            String reportText,
+            List<String> photos) {
+        this(LegacyIdBridge.uuidToLong(buruhId), null, null, null, kilogram, reportText, photos);
+    }
 }
