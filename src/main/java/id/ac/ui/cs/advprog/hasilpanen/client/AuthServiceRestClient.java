@@ -24,9 +24,9 @@ public class AuthServiceRestClient implements MandorBuruhClient {
 
     @Autowired
     public AuthServiceRestClient(
-            @Value("${auth.service.base-url:${AUTH_SERVICE_BASE_URL:http://localhost:8080}}") String baseUrl,
+            @Value("${auth.service.base-url}") String baseUrl,
             RestTemplate restTemplate,
-            @Value("${auth.service.internal-token:${AUTH_INTERNAL_SERVICE_TOKEN:dev-internal-token}}") String internalServiceToken) {
+            @Value("${auth.service.internal-token}") String internalServiceToken) {
         this.baseUrl = baseUrl;
         this.restTemplate = restTemplate;
         this.internalServiceToken = internalServiceToken;
