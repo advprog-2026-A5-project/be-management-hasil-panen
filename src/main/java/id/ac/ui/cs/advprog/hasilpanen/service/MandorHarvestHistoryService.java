@@ -2,12 +2,15 @@ package id.ac.ui.cs.advprog.hasilpanen.service;
 
 import id.ac.ui.cs.advprog.hasilpanen.client.MandorBuruhClient;
 import id.ac.ui.cs.advprog.hasilpanen.domain.HarvestReport;
+import org.springframework.stereotype.Service;
+
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
+@Service
 public class MandorHarvestHistoryService {
 
     private final MandorHarvestRepository repository;

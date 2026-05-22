@@ -1,12 +1,13 @@
 package id.ac.ui.cs.advprog.hasilpanen.domain;
 
+import id.ac.ui.cs.advprog.hasilpanen.service.LegacyIdBridge;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import id.ac.ui.cs.advprog.hasilpanen.service.LegacyIdBridge;
 
 public class HarvestReport {
 
@@ -26,6 +27,8 @@ public class HarvestReport {
     private OffsetDateTime approvedAt;
     private Long rejectedBy;
     private OffsetDateTime rejectedAt;
+    private OffsetDateTime createdAt;
+    private OffsetDateTime updatedAt;
 
     private HarvestReport(
             UUID harvestId,
@@ -36,7 +39,16 @@ public class HarvestReport {
             LocalDate harvestDate,
             BigDecimal kilogram,
             String reportText,
-            List<String> photos) {
+            List<String> photos,
+            HarvestStatus status,
+            String rejectionReason,
+            Long approvedBy,
+            OffsetDateTime approvedAt,
+            Long rejectedBy,
+            OffsetDateTime rejectedAt,
+            OffsetDateTime createdAt,
+            OffsetDateTime updatedAt,
+            String buruhNameSnapshot) {
         this.harvestId = harvestId;
         this.buruhId = buruhId;
         this.mandorIdSnapshot = mandorIdSnapshot;
@@ -46,7 +58,15 @@ public class HarvestReport {
         this.kilogram = kilogram;
         this.reportText = reportText;
         this.photos = new ArrayList<>(photos);
-        this.status = HarvestStatus.PENDING;
+        this.status = status;
+        this.rejectionReason = rejectionReason;
+        this.approvedBy = approvedBy;
+        this.approvedAt = approvedAt;
+        this.rejectedBy = rejectedBy;
+        this.rejectedAt = rejectedAt;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.buruhNameSnapshot = buruhNameSnapshot;
     }
 
     public static HarvestReport submit(
@@ -60,7 +80,66 @@ public class HarvestReport {
             String reportText,
             List<String> photos) {
         HarvestValidationPolicy.validateSubmission(kilogram, reportText, photos);
-        return new HarvestReport(harvestId, buruhId, mandorIdSnapshot, kebunCodeSnapshot, kebunIdSnapshot, harvestDate, kilogram, reportText, photos);
+        OffsetDateTime now = OffsetDateTime.now();
+        return new HarvestReport(
+                harvestId,
+                buruhId,
+                mandorIdSnapshot,
+                kebunCodeSnapshot,
+                kebunIdSnapshot,
+                harvestDate,
+                kilogram,
+                reportText,
+                photos,
+                HarvestStatus.PENDING,
+                null,
+                null,
+                null,
+                null,
+                null,
+                now,
+                now,
+                null);
+    }
+
+    public static HarvestReport restore(
+            UUID harvestId,
+            Long buruhId,
+            Long mandorIdSnapshot,
+            String kebunCodeSnapshot,
+            String kebunIdSnapshot,
+            String buruhNameSnapshot,
+            LocalDate harvestDate,
+            BigDecimal kilogram,
+            String reportText,
+            List<String> photos,
+            HarvestStatus status,
+            String rejectionReason,
+            Long approvedBy,
+            OffsetDateTime approvedAt,
+            Long rejectedBy,
+            OffsetDateTime rejectedAt,
+            OffsetDateTime createdAt,
+            OffsetDateTime updatedAt) {
+        return new HarvestReport(
+                harvestId,
+                buruhId,
+                mandorIdSnapshot,
+                kebunCodeSnapshot,
+                kebunIdSnapshot,
+                harvestDate,
+                kilogram,
+                reportText,
+                photos,
+                status,
+                rejectionReason,
+                approvedBy,
+                approvedAt,
+                rejectedBy,
+                rejectedAt,
+                createdAt,
+                updatedAt,
+                buruhNameSnapshot);
     }
 
     // Backward-compatible bridge for legacy UUID-based call sites.
@@ -95,13 +174,21 @@ public class HarvestReport {
         return LegacyIdBridge.longToUuid(buruhId);
     }
 
-    public Long getBuruhAuthId() { return buruhId; }
+    public Long getBuruhAuthId() {
+        return buruhId;
+    }
 
-    public Long getMandorIdSnapshot() { return mandorIdSnapshot; }
+    public Long getMandorIdSnapshot() {
+        return mandorIdSnapshot;
+    }
 
-    public String getKebunCodeSnapshot() { return kebunCodeSnapshot == null ? "" : kebunCodeSnapshot; }
+    public String getKebunCodeSnapshot() {
+        return kebunCodeSnapshot == null ? "" : kebunCodeSnapshot;
+    }
 
-    public String getKebunIdSnapshot() { return kebunIdSnapshot; }
+    public String getKebunIdSnapshot() {
+        return kebunIdSnapshot;
+    }
 
     public String getBuruhNameSnapshot() {
         return buruhNameSnapshot == null ? "" : buruhNameSnapshot;
@@ -121,6 +208,22 @@ public class HarvestReport {
 
     public BigDecimal getKilogram() {
         return kilogram;
+    }
+
+    public String getReportText() {
+        return reportText;
+    }
+
+    public List<String> getPhotos() {
+        return List.copyOf(photos);
+    }
+
+    public OffsetDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public OffsetDateTime getUpdatedAt() {
+        return updatedAt;
     }
 
     public Long getApprovedBy() {
@@ -146,6 +249,8 @@ public class HarvestReport {
         this.status = HarvestStatus.APPROVED;
         this.approvedBy = approvedBy;
         this.approvedAt = OffsetDateTime.now();
+        this.rejectionReason = null;
+        this.updatedAt = OffsetDateTime.now();
     }
 
     public void approve(UUID approvedBy) {
@@ -168,6 +273,7 @@ public class HarvestReport {
         this.rejectionReason = reason;
         this.rejectedBy = rejectedBy;
         this.rejectedAt = OffsetDateTime.now();
+        this.updatedAt = OffsetDateTime.now();
     }
 
     public void reject(UUID rejectedBy, String reason) {

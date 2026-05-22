@@ -4,9 +4,14 @@ import id.ac.ui.cs.advprog.hasilpanen.client.AuthServiceRestClient;
 import id.ac.ui.cs.advprog.hasilpanen.client.KebunServiceRestClient;
 import id.ac.ui.cs.advprog.hasilpanen.domain.HarvestReport;
 import id.ac.ui.cs.advprog.hasilpanen.domain.HarvestStatus;
+import org.springframework.stereotype.Service;
+
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+
+@Service
 public class HarvestPublicApiService {
 
     private final AuthServiceRestClient authClient;
@@ -16,6 +21,8 @@ public class HarvestPublicApiService {
     private final MandorHarvestHistoryService mandorHarvestHistoryService;
     private final ApproveHarvestService approveHarvestService;
     private final RejectHarvestService rejectHarvestService;
+    private final ApprovalRepository approvalRepository;
+    private final MandorHarvestRepository mandorHarvestRepository;
 
     public HarvestPublicApiService(
             AuthServiceRestClient authClient,
@@ -24,7 +31,9 @@ public class HarvestPublicApiService {
             GetMyHarvestHistoryService getMyHarvestHistoryService,
             MandorHarvestHistoryService mandorHarvestHistoryService,
             ApproveHarvestService approveHarvestService,
-            RejectHarvestService rejectHarvestService) {
+            RejectHarvestService rejectHarvestService,
+            ApprovalRepository approvalRepository,
+            MandorHarvestRepository mandorHarvestRepository) {
         this.authClient = authClient;
         this.kebunClient = kebunClient;
         this.createHarvestService = createHarvestService;
@@ -32,6 +41,8 @@ public class HarvestPublicApiService {
         this.mandorHarvestHistoryService = mandorHarvestHistoryService;
         this.approveHarvestService = approveHarvestService;
         this.rejectHarvestService = rejectHarvestService;
+        this.approvalRepository = approvalRepository;
+        this.mandorHarvestRepository = mandorHarvestRepository;
     }
 
     public HarvestSubmissionResult submit(SubmitHarvestRequest request, String bearerToken) {
@@ -70,10 +81,10 @@ public class HarvestPublicApiService {
         requireRole(currentUser, "BURUH");
 
         MyHarvestHistoryResult result = getMyHarvestHistoryService.getMyHistory(
-                new MyHarvestHistoryQuery(currentUser.id(), startDate, endDate, status, 0, 50));
+                new MyHarvestHistoryQuery(currentUser.id(), startDate, endDate, status, 0, 200));
 
         return result.items().stream()
-                .map(item -> new MyHarvestResult(item.harvestId(), item.harvestDate(), item.status()))
+                .map(item -> new MyHarvestResult(item.harvestId(), item.harvestDate(), item.status(), item.rejectionReason()))
                 .toList();
     }
 
@@ -82,6 +93,54 @@ public class HarvestPublicApiService {
         requireRole(currentUser, "MANDOR");
         return mandorHarvestHistoryService.listAssignedHarvests(
                 new MandorHarvestListQuery(currentUser.id(), harvestDate, buruhName));
+    }
+
+    public List<MandorHarvestView> getMandorBuruhHarvests(Long buruhId, LocalDate harvestDate, String bearerToken) {
+        HarvestIdentity currentUser = requireCurrentUser(bearerToken);
+        requireRole(currentUser, "MANDOR");
+
+        return mandorHarvestHistoryService.getBuruhHarvests(currentUser.id(), buruhId).stream()
+                .filter(item -> harvestDate == null || harvestDate.equals(item.harvestDate()))
+                .toList();
+    }
+
+    public HarvestDetailResult getHarvestDetail(UUID harvestId, String bearerToken) {
+        HarvestIdentity currentUser = requireCurrentUser(bearerToken);
+        HarvestReport report = approvalRepository.findById(harvestId)
+                .orElseThrow(() -> new HarvestNotFoundException("harvest not found"));
+
+        String role = currentUser.role() == null ? "" : currentUser.role().toUpperCase();
+        if ("BURUH".equals(role) && !currentUser.id().equals(report.getBuruhAuthId())) {
+            throw new RoleForbiddenException("cannot access other buruh harvest");
+        }
+        if ("MANDOR".equals(role)) {
+            Set<Long> assigned = authClient.getBuruhUnderMandor(currentUser.id(), bearerToken);
+            if (!assigned.contains(report.getBuruhAuthId())
+                    || !kebunClient.hasFarmAccess(currentUser.id(), report.getKebunCodeSnapshot(), bearerToken)) {
+                throw new RoleForbiddenException("mandor unauthorized for this harvest");
+            }
+        }
+
+        return HarvestDetailResult.from(report);
+    }
+
+    public List<EligibleShipmentResult> getEligibleForShipment(String bearerToken) {
+        HarvestIdentity currentUser = requireCurrentUser(bearerToken);
+        String role = currentUser.role() == null ? "" : currentUser.role().toUpperCase();
+        if (!"MANDOR".equals(role) && !"SUPIR".equals(role) && !"ADMIN_UTAMA".equals(role)) {
+            throw new RoleForbiddenException("MANDOR, SUPIR, or ADMIN_UTAMA role is required");
+        }
+
+        List<HarvestReport> reports = mandorHarvestRepository.findAll().stream()
+                .filter(item -> item.getStatus() == HarvestStatus.APPROVED)
+                .toList();
+
+        if ("MANDOR".equals(role)) {
+            Set<Long> assigned = authClient.getBuruhUnderMandor(currentUser.id(), bearerToken);
+            reports = reports.stream().filter(item -> assigned.contains(item.getBuruhAuthId())).toList();
+        }
+
+        return reports.stream().map(EligibleShipmentResult::from).toList();
     }
 
     public void approve(UUID harvestId, String bearerToken) {
@@ -119,15 +178,70 @@ public class HarvestPublicApiService {
         }
     }
 
-    public record SubmitHarvestRequest(java.math.BigDecimal kilogram, String reportText, List<String> photos) {}
+    public record SubmitHarvestRequest(java.math.BigDecimal kilogram, String reportText, List<String> photos) {
+    }
 
-    public record HarvestSubmissionResult(UUID harvestId, Long buruhId, Long mandorId, String kebunCode, HarvestStatus status) {}
+    public record HarvestSubmissionResult(UUID harvestId, Long buruhId, Long mandorId, String kebunCode, HarvestStatus status) {
+    }
 
-    public record MyHarvestResult(UUID harvestId, LocalDate harvestDate, HarvestStatus status) {}
+    public record MyHarvestResult(UUID harvestId, LocalDate harvestDate, HarvestStatus status, String rejectionReason) {
+        public MyHarvestResult(UUID harvestId, LocalDate harvestDate, HarvestStatus status) {
+            this(harvestId, harvestDate, status, null);
+        }
+    }
 
-    public record HarvestIdentity(Long id, String email, String nama, String role) {}
+    public record HarvestDetailResult(
+            UUID harvestId,
+            Long buruhId,
+            String buruhName,
+            String kebunCode,
+            LocalDate harvestDate,
+            java.math.BigDecimal kilogram,
+            String reportText,
+            List<String> photos,
+            HarvestStatus status,
+            String rejectionReason,
+            java.time.OffsetDateTime createdAt,
+            java.time.OffsetDateTime updatedAt,
+            java.time.OffsetDateTime approvedAt,
+            java.time.OffsetDateTime rejectedAt) {
 
-    public record BuruhSupervisor(Long buruhId, String buruhNama, Long mandorId, String mandorNama, boolean active) {}
+        public static HarvestDetailResult from(HarvestReport report) {
+            return new HarvestDetailResult(
+                    report.getHarvestId(),
+                    report.getBuruhAuthId(),
+                    report.getBuruhNameSnapshot(),
+                    report.getKebunCodeSnapshot(),
+                    report.getHarvestDate(),
+                    report.getKilogram(),
+                    report.getReportText(),
+                    report.getPhotos(),
+                    report.getStatus(),
+                    report.getRejectionReason(),
+                    report.getCreatedAt(),
+                    report.getUpdatedAt(),
+                    report.getApprovedAt(),
+                    report.getRejectedAt());
+        }
+    }
 
-    public record MandorKebunAssignment(Long mandorId, String kebunId, String kebunCode, String kebunName, boolean active) {}
+    public record EligibleShipmentResult(UUID harvestId, Long buruhId, String kebunCode, LocalDate harvestDate, java.math.BigDecimal kilogram) {
+        public static EligibleShipmentResult from(HarvestReport report) {
+            return new EligibleShipmentResult(
+                    report.getHarvestId(),
+                    report.getBuruhAuthId(),
+                    report.getKebunCodeSnapshot(),
+                    report.getHarvestDate(),
+                    report.getKilogram());
+        }
+    }
+
+    public record HarvestIdentity(Long id, String email, String nama, String role) {
+    }
+
+    public record BuruhSupervisor(Long buruhId, String buruhNama, Long mandorId, String mandorNama, boolean active) {
+    }
+
+    public record MandorKebunAssignment(Long mandorId, String kebunId, String kebunCode, String kebunName, boolean active) {
+    }
 }
