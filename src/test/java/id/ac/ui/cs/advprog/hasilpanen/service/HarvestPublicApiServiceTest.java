@@ -38,6 +38,10 @@ class HarvestPublicApiServiceTest {
     private ApproveHarvestService approveHarvestService;
     @Mock
     private RejectHarvestService rejectHarvestService;
+    @Mock
+    private ApprovalRepository approvalRepository;
+    @Mock
+    private MandorHarvestRepository mandorHarvestRepository;
 
     @InjectMocks
     private HarvestPublicApiService service;
@@ -126,5 +130,41 @@ class HarvestPublicApiServiceTest {
                 new HarvestPublicApiService.SubmitHarvestRequest(BigDecimal.ONE, "Panen", List.of("proof.jpg")),
                 "Bearer invalid"))
                 .isInstanceOf(AuthenticationRequiredException.class);
+    }
+
+    @Test
+    void eligibleForShipmentReturnsOnlyApprovedHarvests() {
+        HarvestReport approved = HarvestReport.submit(
+                UUID.randomUUID(),
+                2L,
+                3L,
+                "KB001",
+                null,
+                LocalDate.now(),
+                BigDecimal.TEN,
+                "ok",
+                List.of("proof.jpg"));
+        approved.approve(3L);
+
+        HarvestReport rejected = HarvestReport.submit(
+                UUID.randomUUID(),
+                2L,
+                3L,
+                "KB001",
+                null,
+                LocalDate.now(),
+                BigDecimal.TEN,
+                "bad",
+                List.of("proof.jpg"));
+        rejected.reject(3L, "invalid");
+
+        when(authClient.getCurrentUserIdentity("Bearer token"))
+                .thenReturn(new HarvestPublicApiService.HarvestIdentity(1L, "admin@mysawit.id", "Admin", "ADMIN_UTAMA"));
+        when(mandorHarvestRepository.findAll()).thenReturn(List.of(approved, rejected));
+
+        List<HarvestPublicApiService.EligibleShipmentResult> result = service.getEligibleForShipment("Bearer token");
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().harvestId()).isEqualTo(approved.getHarvestId());
     }
 }

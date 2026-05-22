@@ -17,6 +17,9 @@ import id.ac.ui.cs.advprog.hasilpanen.service.HarvestPublicApiService.HarvestSub
 import id.ac.ui.cs.advprog.hasilpanen.service.HarvestPublicApiService.MyHarvestResult;
 import id.ac.ui.cs.advprog.hasilpanen.service.AuthenticationRequiredException;
 import id.ac.ui.cs.advprog.hasilpanen.service.RoleForbiddenException;
+import id.ac.ui.cs.advprog.hasilpanen.repository.HarvestPhotoMetadataRepository;
+import id.ac.ui.cs.advprog.hasilpanen.storage.StorageProperties;
+import id.ac.ui.cs.advprog.hasilpanen.storage.StorageService;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -39,6 +42,12 @@ class HarvestControllerTest {
 
     @MockBean
     private HarvestPublicApiService harvestPublicApiService;
+    @MockBean
+    private StorageService storageService;
+    @MockBean
+    private StorageProperties storageProperties;
+    @MockBean
+    private HarvestPhotoMetadataRepository photoMetadataRepository;
 
     @Test
     void buruhCanSubmitHarvestAndSnapshotIsReturned() throws Exception {
@@ -56,7 +65,7 @@ class HarvestControllerTest {
                                   "photos": ["proof-1.jpg"]
                                 }
                                 """))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.harvestId").value(harvestId.toString()))
                 .andExpect(jsonPath("$.buruhId").value(20))
                 .andExpect(jsonPath("$.mandorId").value(30))

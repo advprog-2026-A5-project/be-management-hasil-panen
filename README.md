@@ -2,34 +2,43 @@
 
 ## Local Run
 
-- Default port: `8082`
-- Override port: `SERVER_PORT`
-- Default DB (local): H2 in-memory
-- External dependencies:
-  - Auth service base URL: `AUTH_SERVICE_BASE_URL` (default `http://localhost:8080`)
-  - Kebun service base URL: `KEBUN_SERVICE_BASE_URL` (default `http://localhost:8081`)
-
-Run:
-
 ```powershell
+./gradlew clean test
 ./gradlew bootRun
 ```
 
-## Public API (Current)
+Default port: `8082` (set `PORT` to override).
 
-- `POST /harvests`
+## API Paths
+
+All public routes are available on both:
+- legacy root: `/...`
+- recommended module prefix: `/api/hasil-panen/...`
+
+## Key Endpoints
+
+- `POST /harvests` (JSON or multipart)
+- `GET /harvests/{harvestId}`
 - `GET /harvests/me`
 - `GET /mandor/harvests`
+- `GET /mandor/buruh/{buruhId}/harvests`
 - `POST /harvests/{harvestId}/approve`
 - `POST /harvests/{harvestId}/reject`
+- `GET /harvest-reports/eligible-for-shipment`
 - `GET /internal/harvests/{harvestId}/transport-eligibility`
 
-## Status Rules
+## Core Configuration
 
-- `PENDING` after submission
-- `APPROVED` when validated by authorized mandor
-- `REJECTED` when rejected with reason
-- Transport eligibility:
-  - `APPROVED` => `eligible=true`
-  - `PENDING`/`REJECTED` => `eligible=false`
+- `AUTH_SERVICE_BASE_URL`
+- `KEBUN_SERVICE_BASE_URL`
+- `PAYMENT_SERVICE_BASE_URL`
+- `PAYROLL_ENDPOINT`
+- `CORS_ALLOWED_ORIGINS`
 
+Storage:
+- `STORAGE_PROVIDER` (`local` or `cloudinary`)
+- `LOCAL_STORAGE_ROOT`
+- `MAX_UPLOAD_SIZE_MB`
+- `CLOUDINARY_CLOUD_NAME`
+- `CLOUDINARY_API_KEY`
+- `CLOUDINARY_API_SECRET`
