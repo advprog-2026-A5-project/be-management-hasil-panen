@@ -3,9 +3,13 @@ package id.ac.ui.cs.advprog.hasilpanen.service;
 import id.ac.ui.cs.advprog.hasilpanen.client.KebunClient;
 import id.ac.ui.cs.advprog.hasilpanen.client.MandorBuruhClient;
 import id.ac.ui.cs.advprog.hasilpanen.domain.HarvestReport;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
 import java.time.Instant;
 import java.util.UUID;
 
+@Service
 public class ApproveHarvestService {
 
     private final ApprovalRepository approvalRepository;
@@ -13,6 +17,7 @@ public class ApproveHarvestService {
     private final MandorBuruhClient mandorBuruhClient;
     private final KebunClient kebunClient;
 
+    @Autowired
     public ApproveHarvestService(
             ApprovalRepository approvalRepository,
             OutboxEventRepository outboxEventRepository,

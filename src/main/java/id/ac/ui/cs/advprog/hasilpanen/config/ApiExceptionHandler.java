@@ -10,9 +10,11 @@ import id.ac.ui.cs.advprog.hasilpanen.service.MandorUnauthorizedAccessException;
 import id.ac.ui.cs.advprog.hasilpanen.service.RoleForbiddenException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -69,11 +71,25 @@ public class ApiExceptionHandler {
         return build(HttpStatus.CONFLICT, ApiErrorCode.CONFLICT, ex.getMessage(), request.getRequestURI());
     }
 
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiErrorResponse> handleDataConflict(
+            DataIntegrityViolationException ex,
+            HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ApiErrorCode.CONFLICT, "conflict with existing data", request.getRequestURI());
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiErrorResponse> handleBadRequest(
             IllegalArgumentException ex,
             HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, ApiErrorCode.BAD_REQUEST, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiErrorResponse> handleUploadLimit(
+            MaxUploadSizeExceededException ex,
+            HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ApiErrorCode.BAD_REQUEST, "uploaded file exceeds configured max size", request.getRequestURI());
     }
 
     @ExceptionHandler(Exception.class)
