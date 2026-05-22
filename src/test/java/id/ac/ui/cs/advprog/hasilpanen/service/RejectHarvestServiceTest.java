@@ -35,6 +35,8 @@ class RejectHarvestServiceTest {
         HarvestReport updated = repository.findById(report.getHarvestId()).orElseThrow();
         assertThat(updated.getStatus()).isEqualTo(HarvestStatus.REJECTED);
         assertThat(updated.getRejectionReason()).isEqualTo("Foto tidak valid");
+        assertThat(updated.getApprovedAt()).isNull();
+        assertThat(updated.getApprovedBy()).isNull();
     }
 
     @Test

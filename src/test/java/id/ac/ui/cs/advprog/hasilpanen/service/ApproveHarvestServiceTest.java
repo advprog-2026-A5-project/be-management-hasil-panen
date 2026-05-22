@@ -133,6 +133,7 @@ class ApproveHarvestServiceTest {
         assertThat(event.payload()).contains("\"buruhId\":" + report.getBuruhAuthId());
         assertThat(event.payload()).contains("\"mandorId\":" + LegacyIdBridge.uuidToLong(mandorId));
         assertThat(event.payload()).contains("\"kebunCode\":\"KB001\"");
+        assertThat(event.payload()).contains("\"harvestDate\":\"2026-05-10\"");
         assertThat(event.payload()).contains("\"kilogram\":120");
         assertThat(event.payload()).contains("\"idempotencyKey\":\"");
     }
