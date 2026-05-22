@@ -1,4 +1,5 @@
 import com.github.spotbugs.snom.SpotBugsTask
+import org.gradle.testing.jacoco.tasks.JacocoReport
 
 plugins {
     java
@@ -77,11 +78,14 @@ tasks.test {
     finalizedBy(tasks.jacocoTestReport)
 }
 
-tasks.jacocoTestReport {
+tasks.named<JacocoReport>("jacocoTestReport") {
     dependsOn(tasks.test)
-    reports.xml.required.set(true)
-}
 
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+}
 sonar {
     properties {
         property("sonar.projectKey", System.getenv("SONAR_PROJECT_KEY") ?: "")
@@ -91,12 +95,5 @@ sonar {
             "sonar.coverage.jacoco.xmlReportPaths",
             "${layout.buildDirectory.get()}/reports/jacoco/test/jacocoTestReport.xml"
         )
-    }
-}
-
-jacocoTestReport {
-    reports {
-        xml.required = true
-        html.required = true
     }
 }
