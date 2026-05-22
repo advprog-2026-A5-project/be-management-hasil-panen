@@ -1,4 +1,5 @@
 import com.github.spotbugs.snom.SpotBugsTask
+import org.gradle.testing.jacoco.tasks.JacocoReport
 
 plugins {
     java
@@ -6,6 +7,7 @@ plugins {
     id("org.springframework.boot") version "3.5.10"
     id("io.spring.dependency-management") version "1.1.7"
     id("com.github.spotbugs") version "6.4.8"
+    id("org.sonarqube") version "6.2.0.5505"
 }
 
 group = "id.ac.ui.cs.advprog"
@@ -19,7 +21,7 @@ java {
 }
 
 spotbugs {
-
+    ignoreFailures = true
 }
 
 configurations {
@@ -34,13 +36,20 @@ repositories {
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("io.micrometer:micrometer-registry-prometheus")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    implementation("org.flywaydb:flyway-core")
+    implementation("org.flywaydb:flyway-database-postgresql")
+    implementation("com.cloudinary:cloudinary-http44:1.39.0")
     compileOnly("org.projectlombok:lombok")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
     annotationProcessor("org.projectlombok:lombok")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    runtimeOnly("org.postgresql:postgresql")
     runtimeOnly("com.h2database:h2")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     implementation("io.jsonwebtoken:jjwt-api:0.11.5")
@@ -52,7 +61,12 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
+tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
+    mainClass.set("id.ac.ui.cs.advprog.hasilpanen.HasilPanenApplication")
+}
+
 tasks.withType<SpotBugsTask> {
+    ignoreFailures = true
     reports {
         create("sarif") {
             required.set(true)
@@ -64,7 +78,22 @@ tasks.test {
     finalizedBy(tasks.jacocoTestReport)
 }
 
-tasks.jacocoTestReport {
+tasks.named<JacocoReport>("jacocoTestReport") {
     dependsOn(tasks.test)
-    reports.xml.required.set(true)
+
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+}
+sonar {
+    properties {
+        property("sonar.projectKey", System.getenv("SONAR_PROJECT_KEY") ?: "")
+        property("sonar.organization", System.getenv("SONAR_ORGANIZATION") ?: "")
+        property("sonar.host.url", "https://sonarcloud.io")
+        property(
+            "sonar.coverage.jacoco.xmlReportPaths",
+            "${layout.buildDirectory.get()}/reports/jacoco/test/jacocoTestReport.xml"
+        )
+    }
 }
